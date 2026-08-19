@@ -325,7 +325,7 @@ const {
 // Provenance discipline: every window/pairing tagged verified|estimate.
 // ================================================================
 
-const APP_VERSION = "1.7.1 web";
+const APP_VERSION = "1.7.2 web";
 const TYPE_META = {
   red: {
     label: "Red",
@@ -1853,12 +1853,37 @@ function CellarBook() {
     className: "cb-panel"
   }, /*#__PURE__*/React.createElement("h2", null, "Drunk log"), consumed.length === 0 && /*#__PURE__*/React.createElement("div", {
     className: "cb-consumed-item"
-  }, "Nothing logged yet."), consumed.map(c => /*#__PURE__*/React.createElement("div", {
-    key: c.id,
-    className: "cb-consumed-item"
-  }, /*#__PURE__*/React.createElement("strong", null, c.name, " ", c.vintage), " ", /*#__PURE__*/React.createElement("span", {
-    className: "d"
-  }, "· ", c.date), c.verdict && /*#__PURE__*/React.createElement("div", null, c.verdict))), /*#__PURE__*/React.createElement("h2", {
+  }, "Nothing logged yet."), (() => {
+    const byKey = {};
+    const groups = [];
+    consumed.forEach(c => {
+      const k = (c.name || "?") + "|" + (c.vintage || "");
+      if (!byKey[k]) {
+        byKey[k] = {
+          name: c.name,
+          vintage: c.vintage,
+          items: []
+        };
+        groups.push(byKey[k]);
+      }
+      byKey[k].items.push(c);
+    });
+    groups.forEach(g => g.items.sort((a, b) => String(b.date).localeCompare(String(a.date))));
+    groups.sort((a, b) => String(b.items[0].date).localeCompare(String(a.items[0].date)));
+    return groups.map(g => /*#__PURE__*/React.createElement("div", {
+      key: g.name + g.vintage,
+      className: "cb-consumed-item"
+    }, /*#__PURE__*/React.createElement("strong", null, g.name, " ", g.vintage), g.items.length > 1 && /*#__PURE__*/React.createElement("span", {
+      className: "d"
+    }, " · ", g.items.length, " bottles"), g.items.map(c => /*#__PURE__*/React.createElement("div", {
+      key: c.id,
+      style: {
+        marginTop: 6
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "d"
+    }, c.date), c.verdict ? " — " + c.verdict : ""))));
+  })(), /*#__PURE__*/React.createElement("h2", {
     style: {
       marginTop: 24
     }
