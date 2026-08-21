@@ -309,7 +309,9 @@ var d=null!=c&&c.hydratedSources||null,e=!1,f="",g=aj;null!==c&&void 0!==c&&(!0=
 function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmountComponentAtNode=function(a){if(!Vd(a))throw Error(m(40));return a._reactRootContainer?(yb(function(){Wd(null,null,a,!1,function(){a._reactRootContainer=null;a[Ja]=null})}),!0):!1};Q.unstable_batchedUpdates=Tf;Q.unstable_renderSubtreeIntoContainer=function(a,b,c,d){if(!Vd(c))throw Error(m(200));if(null==a||void 0===a._reactInternals)throw Error(m(38));return Wd(a,b,c,!1,d)};Q.version="18.3.1-next-f1338f8080-20240426"});
 })();
 </script>
-<script>// Standalone build 1.6.0: runs in any browser, talks to Dropbox directly.
+<script>// Web build 1.8.0: public GitHub Pages copy. Privacy-stripped by design --
+// empty seed, anonymised taste profile, no personal file paths. The real
+// cellar arrives from Dropbox after connecting, on your device only.
 const {
   useState,
   useEffect,
@@ -325,7 +327,7 @@ const {
 // Provenance discipline: every window/pairing tagged verified|estimate.
 // ================================================================
 
-const APP_VERSION = "1.7.2 web";
+const APP_VERSION = "1.8.0 web";
 const TYPE_META = {
   red: {
     label: "Red",
@@ -353,35 +355,54 @@ const TYPE_META = {
 // The kitchen fridge is not one bucket: it has a wine rack with an ordered
 // left-to-right sequence, and a door. v1.5.4 and earlier collapsed both into
 // "kitchen", which is why the app could not show you what you actually have.
+// Location model, v1.8.0 (ruled 2026-08-21). Every wine-fridge shelf and the
+// kitchen rack is an ORDERED run of 4 slots carrying pos 1-4, left to right.
+// Through v1.7.2 only krack was ordered and shelf order lived in free text --
+// the same fault as the Maturity tab, one field over. "kitchen" is retired:
+// it collapsed the drawer into a vague bucket. kdrawer and library replace it.
+const SLOTS = 4;
 const LOCATIONS = [{
   id: "wf1",
   group: "Wine fridge",
-  label: "Shelf 1 (top)"
+  label: "Shelf 1 (top)",
+  ordered: true,
+  slots: SLOTS
 }, {
   id: "wf2",
   group: "Wine fridge",
-  label: "Shelf 2"
+  label: "Shelf 2",
+  ordered: true,
+  slots: SLOTS
 }, {
   id: "wf3",
   group: "Wine fridge",
-  label: "Shelf 3"
+  label: "Shelf 3",
+  ordered: true,
+  slots: SLOTS
 }, {
   id: "wf4",
   group: "Wine fridge",
-  label: "Shelf 4 (bottom)"
+  label: "Shelf 4 (bottom)",
+  ordered: true,
+  slots: SLOTS
 }, {
   id: "krack",
   group: "Kitchen fridge",
   label: "Wine rack (left to right)",
-  ordered: true
+  ordered: true,
+  slots: SLOTS
 }, {
   id: "kdoor",
   group: "Kitchen fridge",
   label: "Door"
 }, {
-  id: "kitchen",
+  id: "kdrawer",
   group: "Kitchen fridge",
-  label: "Elsewhere in the kitchen fridge"
+  label: "Vegetable drawer"
+}, {
+  id: "library",
+  group: "Library",
+  label: "Library shelf (room temperature)"
 }, {
   id: "basement",
   group: "Basement",
@@ -395,11 +416,16 @@ const LOCATIONS = [{
   group: "Unconfirmed",
   label: "Not seen in any photo"
 }];
+const LOC_BY_ID = Object.fromEntries(LOCATIONS.map(l => [l.id, l]));
+const locLabel = id => {
+  const l = LOC_BY_ID[id];
+  return l ? l.group + (l.group !== l.label ? " - " + l.label : "") : id;
+};
 
 // Groups that are real stock. "Unconfirmed" is deliberately excluded: those
 // bottles are open questions, not inventory, and must never inflate a count
 // or reach the sommelier.
-const STOCK_GROUPS = ["Wine fridge", "Kitchen fridge", "Basement", "Just added"];
+const STOCK_GROUPS = ["Wine fridge", "Kitchen fridge", "Library", "Basement", "Just added"];
 
 // The master file carries a top-level "note" describing the physical model in
 // plain language, for whoever reads cellarbook.json outside this app. v1.5.7
@@ -408,7 +434,7 @@ const STOCK_GROUPS = ["Wine fridge", "Kitchen fridge", "Basement", "Just added"]
 // verbatim rack statement. v1.5.8 carries it through pull, cache, push and
 // backup. MASTER_NOTE below is the corrected text for the v1.5.8 location
 // vocabulary; it is never applied silently, only by the button in Sync.
-const MASTER_NOTE = "Location model, CellarBook v1.7.x. wf1-wf4 = wine fridge shelves, top to bottom. krack = kitchen fridge wine rack, ORDERED left to right by each bottle's pos field (1 = leftmost). kdoor = kitchen fridge door. kitchen = elsewhere in the kitchen fridge. basement = basement cellar. unassigned = added but not yet placed. unconfirmed = open question from the Oeni export, excluded from every count and never sent to the sommelier. Label images: /001 AYAY/004 PERSONAL/Wine & Food/Cellar/Wines/ (named per wine). Master file lives at /001 AYAY/004 PERSONAL/Wine & Food/CellarBook/cellarbook.json. The live note in the master is authoritative and may be newer than this app's fallback text.";
+const MASTER_NOTE = "LOCATION MODEL, CellarBook v1.8.0. wf1-wf4 = wine fridge shelves, top to bottom, EACH with a pos field 1-4 left to right. krack = kitchen fridge wine rack, pos 1-4 left to right. kdoor = kitchen fridge door. kdrawer = kitchen fridge vegetable drawer (replaces the retired 'kitchen' code). library = library shelf, room temperature. basement = basement cellar. unassigned = added but not yet placed. unconfirmed = open question, excluded from every count and never sent to the sommelier. WINDOW SCHEMA v3: window.from = first year good to drink, null means ready on release; window.to = last year, null means no meaningful limit unopened; window.unknown = true forces the Unclassified bucket regardless of years; window.decant = minutes advised, null means none; window.detail = prose for human eyes only, NEVER parsed; window.source = verified or estimate. The old window.status prose string is DELETED. Maturity computes buckets from the current year: unknown -> Unclassified; year < from -> Hold; from <= year <= to -> Ready, and Drink soon when to is set and one year or less away; year > to -> Past window. Nothing can fall out of every bucket. openDays = {min,max} days of useful life once opened and refrigerated; max null means no practical limit; the field is absent where not recorded, and absent is not the same as zero. The live note in the master is authoritative and may be newer than this build's fallback text.";
 const isStock = b => b.loc !== "unconfirmed";
 
 // Bottles in an ordered location carry pos (1 = leftmost). Everything else
@@ -426,13 +452,121 @@ Owner taste profile:
 - Prefers classic pairings; cooks precisely — always ask about the preparation.
 `;
 
+// ================= Drinking windows, schema 3 =================
+// window.status is gone. Every maturity decision is COMPUTED from
+// from/to/unknown plus the clock, and never stored, so it cannot go stale.
+// Today is a fractional year read at render time: 21 Aug 2026 -> 2026.64.
+// Open the app in 2036 and the marker has moved ten years by itself.
+function nowFrac() {
+  const d = new Date(),
+    y = d.getFullYear();
+  const s = new Date(y, 0, 1),
+    e = new Date(y + 1, 0, 1);
+  return y + (d - s) / (e - s);
+}
+
+// Normalises a window from ANY source: seed, local cache, Dropbox master,
+// restored backup, or a record written by a stale v1.7.x device still in the
+// wild. A legacy status string is never mined for a year. It becomes
+// Unclassified, visibly, so it gets corrected rather than guessed at.
+function normWindow(w) {
+  const s = w && typeof w === "object" ? w : {};
+  const num = v => typeof v === "number" && isFinite(v) ? Math.round(v) : null;
+  const legacy = typeof s.status === "string" && s.from === undefined && s.to === undefined;
+  return {
+    from: legacy ? null : num(s.from),
+    to: legacy ? null : num(s.to),
+    unknown: legacy ? true : s.unknown === true,
+    decant: num(s.decant),
+    detail: typeof s.detail === "string" && s.detail ? s.detail : legacy ? String(s.status) : "",
+    source: s.source === "verified" ? "verified" : s.source === "unknown" ? "unknown" : "estimate",
+    legacy: legacy
+  };
+}
+
+// Exactly one bucket for every record, always. The branches are exhaustive by
+// construction, which is the whole point: the Mirafiore failure was a bottle
+// that matched no branch and silently vanished. "Drink soon" is a sub-state of
+// Ready, not a fourth state -- a bottle in Drink soon is in its window.
+const BUCKETS = ["Drink soon", "Ready", "Hold", "Past window", "Unclassified"];
+const IN_WINDOW = ["Drink soon", "Ready"];
+function windowBucket(w, year) {
+  const n = normWindow(w);
+  const yi = Math.floor(year === undefined ? nowFrac() : year);
+  if (n.unknown) return "Unclassified";
+  if (n.from !== null && yi < n.from) return "Hold";
+  if (n.to !== null && yi > n.to) return "Past window";
+  if (n.to !== null && n.to - yi <= 1) return "Drink soon";
+  return "Ready";
+}
+const BUCKET_COLOR = {
+  "Drink soon": "#D9A0A8",
+  "Ready": "#9FC9A8",
+  "Hold": "#C9A87C",
+  "Past window": "#C08A8A",
+  "Unclassified": "#A5929B"
+};
+
+// The numbered range, in words, for every shape the schema allows.
+function windowRange(w) {
+  const n = normWindow(w);
+  if (n.unknown) return "Not set";
+  if (n.from === null && n.to === null) return "Open ended";
+  if (n.from === null) return "Ready now \u2013 " + n.to;
+  if (n.to === null) return "From " + n.from + ", open ended";
+  return n.from + " \u2013 " + n.to;
+}
+
+// Days of useful life once opened. Absent is NOT zero. A null max already
+// means no practical limit, so min-with-null-max says nothing that both-null
+// does not: both read open ended (ruled 2026-08-21 on the 1968 Calvados,
+// then extended 2026-08-21 to min-with-null-max).
+function openDaysText(o) {
+  if (!o || typeof o !== "object") return "";
+  if (!("min" in o) && !("max" in o)) return "";
+  const has = v => typeof v === "number" && isFinite(v);
+  const hasMin = has(o.min),
+    hasMax = has(o.max);
+  if (!hasMax) {
+    if (hasMin) {
+      try {
+        console.warn("CellarBook: openDays.min with null max carries no advice", o);
+      } catch (e) {}
+    }
+    return "Open ended once opened";
+  }
+  if (!hasMin) {
+    try {
+      console.warn("CellarBook: openDays has max without min", o);
+    } catch (e) {}
+    return "Up to " + o.max + " days once opened";
+  }
+  return o.min + " to " + o.max + " days once opened";
+}
+
+// The taste profile lives in the master (v1.8.0). TASTE_PROFILE below is a
+// FALLBACK only, for first run and for a device that cannot reach Dropbox.
+// Whenever a master is loaded, the master's copy wins.
+function tasteProfileText(tp) {
+  if (!tp || typeof tp !== "object") return TASTE_PROFILE;
+  const L = ["Owner taste profile, read from the master (updated " + (tp.updated || "date not stated") + "):"];
+  if (tp.principle) L.push("- Core principle: " + tp.principle);
+  if (Array.isArray(tp.likes) && tp.likes.length) L.push("- Likes: " + tp.likes.join("; ") + ".");
+  if (Array.isArray(tp.dislikes) && tp.dislikes.length) L.push("- Dislikes: " + tp.dislikes.join("; ") + ".");
+  (Array.isArray(tp.rules) ? tp.rules : []).forEach(r => {
+    L.push("- Rule [" + (r.confidence || "confidence not stated") + "]: " + r.rule + (r.evidence ? " Evidence: " + r.evidence : ""));
+  });
+  if (Array.isArray(tp.projects) && tp.projects.length) L.push("- Standing projects: " + tp.projects.join("; ") + ".");
+  return L.join("\n");
+}
+
 // SEED = snapshot of the Dropbox master as read on 2026-08-14 14:29Z.
 // Rationale: v1.5.3 and v1.5.4 shipped a seed frozen at 2026-07-28. On any
 // device that cannot reach Dropbox, that stale seed is what you see, which is
 // exactly how the app came to show a cellar you no longer have. The seed is
 // now a snapshot of the master, so an offline device is out of date rather
 // than wrong. Refresh it whenever the master moves materially.
-const SEED_AS_OF = "2026-08-14";
+const SEED_AS_OF = "2026-08-21";
 const SEED = []; // web build: starts empty by design — the cellar arrives from Dropbox after connecting.
 
 // Corrected 2026-08-08: Mirafiore Barolo removed — never owned; earlier
@@ -483,19 +617,6 @@ const UNRESOLVED = [{
   vintage: "2022",
   type: "red",
   notes: "Half bottle per the Oeni export."
-}, {
-  id: "u_icewine",
-  name: "Château des Charmes Vidal Icewine",
-  vintage: "2016",
-  type: "port",
-  grapes: "Vidal",
-  notes: "Sweet, not Port. Filed under Port/Sweet for colour coding only."
-}, {
-  id: "u_calvados",
-  name: "Roger Groult Calvados",
-  vintage: "1968",
-  type: "port",
-  notes: "Apple brandy, not wine. Filed under Port/Sweet for colour coding only."
 }].map(b => ({
   ...b,
   loc: "unconfirmed",
@@ -504,9 +625,12 @@ const UNRESOLVED = [{
   origin: "oeni-unresolved",
   region: b.region || "",
   window: {
-    status: "Unknown — bottle not located",
+    from: null,
+    to: null,
+    unknown: true,
+    decant: null,
     detail: "In the Oeni export, never photographed. Confirm it exists before planning around it.",
-    source: "estimate"
+    source: "unknown"
   },
   notes: (b.notes ? b.notes + " " : "") + "Type inferred from the name, not from a label read."
 }));
@@ -606,6 +730,12 @@ function migrate(state) {
     pairings: [],
     ...(state || {})
   };
+  // Windows are normalised on the way in, from every source, so no downstream
+  // code ever has to ask whether it is looking at a v2 or a v3 record.
+  s.bottles = (s.bottles || []).map(b => ({
+    ...b,
+    window: normWindow(b.window)
+  }));
   s.bottles = (s.bottles || []).filter(b => !REMOVED_IDS.includes(b.id));
   s.consumed = s.consumed || [];
   s.pairings = s.pairings || [];
@@ -651,280 +781,20 @@ function failReason(e) {
   return m.slice(0, 200) || "unknown error";
 }
 
-// Maturity curves. Years: from = window opens, ps/pe = peak start/end,
-// until = decline. shape "bell" | "plateau" (plateau = bottled mature,
-// does not improve — honest rendering for Colheita/NV Port/NV fizz).
-// source "verified" = established in our analyses; "estimate" = general
-// knowledge, drawn dashed with an uncertainty band. Not vintage-checked
-// unless marked verified.
-const CURVES = {
-  kopke96: {
-    shape: "plateau",
-    from: 2024,
-    until: 2045,
-    source: "verified",
-    note: "Bottled mature; holds, does not improve."
-  },
-  kopke97: {
-    shape: "plateau",
-    from: 2024,
-    until: 2045,
-    source: "verified",
-    note: "Bottled mature; holds, does not improve."
-  },
-  kopkelbv: {
-    shape: "plateau",
-    from: 2024,
-    until: 2036,
-    source: "estimate",
-    note: "LBV holds years unopened; short fuse once open."
-  },
-  norton: {
-    shape: "bell",
-    from: 2024,
-    ps: 2025,
-    pe: 2027,
-    until: 2029,
-    source: "estimate"
-  },
-  cecchi: {
-    shape: "bell",
-    from: 2023,
-    ps: 2024,
-    pe: 2027,
-    until: 2029,
-    source: "estimate"
-  },
-  patres: {
-    shape: "bell",
-    from: 2027,
-    ps: 2029,
-    pe: 2036,
-    until: 2041,
-    source: "estimate",
-    note: "2021 Barolo logic: real window opens late decade."
-  },
-  massari: {
-    shape: "bell",
-    from: 2027,
-    ps: 2029,
-    pe: 2036,
-    until: 2041,
-    source: "estimate"
-  },
-  ripasso: {
-    shape: "bell",
-    from: 2024,
-    ps: 2025,
-    pe: 2027,
-    until: 2029,
-    source: "estimate",
-    note: "Vintage unknown — curve anchored on style, weakest estimate here."
-  },
-  umani: {
-    shape: "bell",
-    from: 2025,
-    ps: 2025,
-    pe: 2027,
-    until: 2028,
-    source: "estimate"
-  },
-  serlapo: {
-    shape: "bell",
-    from: 2025,
-    ps: 2026,
-    pe: 2030,
-    until: 2032,
-    source: "estimate"
-  },
-  undurraga: {
-    shape: "bell",
-    from: 2023,
-    ps: 2024,
-    pe: 2028,
-    until: 2030,
-    source: "estimate"
-  },
-  david: {
-    shape: "bell",
-    from: 2023,
-    ps: 2024,
-    pe: 2026,
-    until: 2027,
-    source: "estimate",
-    note: "Half bottle — curve compressed."
-  },
-  valdor: {
-    shape: "bell",
-    from: 2021,
-    ps: 2023,
-    pe: 2029,
-    until: 2031,
-    source: "estimate"
-  },
-  mezain: {
-    shape: "bell",
-    from: 2023,
-    ps: 2024,
-    pe: 2026,
-    until: 2027,
-    source: "estimate"
-  },
-  juguet: {
-    shape: "bell",
-    from: 2026,
-    ps: 2027,
-    pe: 2031,
-    until: 2033,
-    source: "estimate",
-    note: "Vintage 2024 owner-verified 2026-08-14; curve is still a style estimate."
-  },
-  fonseca: {
-    shape: "plateau",
-    from: 2024,
-    until: 2032,
-    source: "estimate"
-  },
-  dowswhite: {
-    shape: "plateau",
-    from: 2024,
-    until: 2030,
-    source: "verified",
-    note: "Aperitif pour — readiness verified, endpoint estimated."
-  },
-  lacheteauk: {
-    shape: "bell",
-    from: 2025,
-    ps: 2025,
-    pe: 2026,
-    until: 2027,
-    source: "verified",
-    note: "Vintage photo-verified; drink on the fruit."
-  },
-  lacheteau2: {
-    shape: "bell",
-    from: 2025,
-    ps: 2025,
-    pe: 2026,
-    until: 2027,
-    source: "verified",
-    note: "Same wine as the rack bottle."
-  },
-  bougrierk: {
-    shape: "bell",
-    from: 2024,
-    ps: 2025,
-    pe: 2026,
-    until: 2027,
-    source: "estimate",
-    note: "Touraine SB: drink on the fruit. Readiness verified by the 08-08 bottle; endpoint estimated."
-  },
-  bougrier5: {
-    shape: "bell",
-    from: 2024,
-    ps: 2025,
-    pe: 2026,
-    until: 2027,
-    source: "estimate",
-    note: "Same wine, boxed in the basement."
-  },
-  alamoschard: {
-    shape: "bell",
-    from: 2024,
-    ps: 2025,
-    pe: 2026,
-    until: 2027,
-    source: "estimate",
-    note: "Entry-level Mendoza Chardonnay; freshest young."
-  },
-  bernardus: {
-    shape: "bell",
-    from: 2016,
-    ps: 2017,
-    pe: 2022,
-    until: 2025,
-    source: "estimate",
-    note: "California Chardonnay built for 5-10 years. On this curve the 2015 is already past. Estimate only: open it and look."
-  },
-  undcarmenere: {
-    shape: "bell",
-    from: 2024,
-    ps: 2025,
-    pe: 2027,
-    until: 2028,
-    source: "estimate"
-  },
-  undmerlot: {
-    shape: "bell",
-    from: 2024,
-    ps: 2024,
-    pe: 2026,
-    until: 2027,
-    source: "estimate"
-  },
-  cremant: {
-    shape: "plateau",
-    from: 2024,
-    until: 2028,
-    source: "estimate",
-    note: "Vintage unrecorded; anchored on style alone."
-  },
-  b1786206581864: {
-    shape: "plateau",
-    from: 2024,
-    until: 2030,
-    source: "verified",
-    note: "Basement reserve of the same White Port."
-  },
-  canti: {
-    shape: "bell",
-    from: 2024,
-    ps: 2024,
-    pe: 2025,
-    until: 2026,
-    source: "estimate"
-  },
-  moet: {
-    shape: "plateau",
-    from: 2024,
-    until: 2028,
-    source: "estimate"
-  },
-  guigal: {
-    shape: "bell",
-    from: 2024,
-    ps: 2025,
-    pe: 2028,
-    until: 2029,
-    source: "estimate"
-  },
-  vidalfleury: {
-    shape: "bell",
-    from: 2025,
-    ps: 2026,
-    pe: 2029,
-    until: 2031,
-    source: "estimate",
-    note: "Pre-vintage decant advice; 2023 not separately checked."
-  },
-  alamos2: {
-    shape: "bell",
-    from: 2024,
-    ps: 2024,
-    pe: 2027,
-    until: 2028,
-    source: "verified",
-    note: "Readiness verified by your own 08-05 bottle; endpoint estimated."
-  }
-};
+// Maturity curves: DELETED in v1.8.0. The curve is now derived from
+// window.from / window.to / vintage, so it carries no information the
+// master does not already hold and cannot contradict it.
+
 const SEED_CONSUMED = []; // web build: starts empty by design — the cellar arrives from Dropbox after connecting.
 
 // Field-verified pairings carried in the master. Seeded so an offline device
 // still has the learnings, not just the bottles.
 const SEED_PAIRINGS = []; // web build: starts empty by design — the cellar arrives from Dropbox after connecting.
 
+const SEED_TASTE = null; // web build: the profile arrives with the master, never shipped in the public file.
+
 const STORAGE_KEY = "cellarbook-v1";
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 // ---------------- Storage layer (added v1.5.4) ----------------
 // v1.5.3 called window.storage directly inside empty catch blocks, so a host
@@ -1184,6 +1054,17 @@ function CellarBook() {
     noteRef.current = v;
     setMasterNote(v);
   };
+  // v1.8.0: the taste profile lives in the master, not in app code. Same ref
+  // pattern as the note, and for the same reason: it MUST be carried through
+  // every push, or the first sync from this device silently deletes it from
+  // the master. That is exactly how v1.5.7 destroyed the note.
+  const [tasteProfile, setTasteProfile] = useState(null);
+  const tasteRef = useRef(null);
+  const adoptTaste = tp => {
+    const v = tp && typeof tp === "object" ? tp : tasteRef.current;
+    tasteRef.current = v;
+    setTasteProfile(v);
+  };
   const [selected, setSelected] = useState(null);
   const [highlightId, setHighlightId] = useState(null);
   const [pairState, setPairState] = useState({
@@ -1252,6 +1133,7 @@ function CellarBook() {
       await store.set(STORAGE_KEY, JSON.stringify({
         schema: SCHEMA_VERSION,
         note: noteRef.current,
+        tasteProfile: tasteRef.current,
         bottles: b,
         consumed: c,
         pairings: pr
@@ -1333,6 +1215,7 @@ function CellarBook() {
           updated: new Date().toISOString(),
           schema: SCHEMA_VERSION,
           note: noteRef.current,
+          tasteProfile: tasteRef.current,
           bottles: b,
           consumed: c,
           pairings: pairingsRef.current
@@ -1416,6 +1299,7 @@ function CellarBook() {
     if (!d) return;
     const m = migrate(d);
     adoptNote(d.note);
+    adoptTaste(d.tasteProfile);
     setBottles(m.bottles);
     setConsumed(m.consumed);
     adoptPairings(m.pairings);
@@ -1453,6 +1337,7 @@ function CellarBook() {
         if (!raw) throw new Error("no local state");
         const m = migrate(JSON.parse(raw));
         adoptNote(m.note);
+        adoptTaste(m.tasteProfile);
         setBottles(m.bottles);
         setConsumed(m.consumed);
         adoptPairings(m.pairings);
@@ -1463,6 +1348,7 @@ function CellarBook() {
           consumed: SEED_CONSUMED,
           pairings: SEED_PAIRINGS
         });
+        adoptTaste(SEED_TASTE);
         setBottles(m.bottles);
         setConsumed(m.consumed);
         adoptPairings(m.pairings);
@@ -1491,6 +1377,7 @@ function CellarBook() {
           validateState(d);
           const m = migrate(d);
           adoptNote(d.note);
+          adoptTaste(d.tasteProfile);
           setLastPull(new Date());
           if (dirtyRef.current) {
             // You edited during the pull: your bottles win, but merge in any
@@ -1620,6 +1507,17 @@ function CellarBook() {
       loc
     });
   };
+  const setWindow = (bottle, win) => {
+    const w = normWindow(win);
+    update(bottles.map(x => x.id === bottle.id ? {
+      ...x,
+      window: w
+    } : x));
+    setSelected({
+      ...bottle,
+      window: w
+    });
+  };
   const addBottle = async (b, photoDataUrl) => {
     update([...bottles, b]);
     if (photoDataUrl) {
@@ -1643,8 +1541,10 @@ function CellarBook() {
     }
   }, "Opening the cellar…");
   const q = query.trim().toLowerCase();
-  const match = b => !q || (b.name + " " + b.vintage + " " + (b.grapes || "") + " " + (b.region || "")).toLowerCase().includes(q);
+  const match = b => !q || ((b.name || "") + " " + (b.vintage || "") + " " + (b.region || "") + " " + (b.grapes || "")).toLowerCase().includes(q);
+  const searchable = ["cellar", "maturity", "log"].includes(view);
   const stock = bottles.filter(isStock);
+  const matchCount = stock.filter(match).length;
   const unconfirmedList = bottles.filter(b => !isStock(b));
   const total = stock.reduce((s, b) => s + b.qty, 0);
   const groups = [...STOCK_GROUPS, "Unconfirmed"];
@@ -1728,14 +1628,23 @@ function CellarBook() {
     key: id,
     className: "cb-tab" + (view === id ? " on" : ""),
     onClick: () => setView(id)
-  }, lbl))), view === "cellar" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, lbl))), searchable && /*#__PURE__*/React.createElement("div", {
     className: "cb-bar"
   }, /*#__PURE__*/React.createElement("input", {
     className: "cb-search",
-    placeholder: "Search name, grape, region, vintage…",
+    placeholder: "Search name, vintage, region or grape…",
     value: query,
     onChange: e => setQuery(e.target.value)
-  })), onSeed && /*#__PURE__*/React.createElement("div", {
+  }), q && /*#__PURE__*/React.createElement("button", {
+    className: "cb-btn ghost",
+    onClick: () => setQuery("")
+  }, "Clear")), searchable && q && /*#__PURE__*/React.createElement("div", {
+    className: "cb-note",
+    style: {
+      paddingTop: 6,
+      color: "#C9A87C"
+    }
+  }, "Filtering Cellar, Maturity and the drunk log on “", query, "” — ", matchCount, " of ", stock.length, " records match. Searching name, vintage, region and grape."), view === "cellar" && /*#__PURE__*/React.createElement(React.Fragment, null, onSeed && /*#__PURE__*/React.createElement("div", {
     className: "cb-note",
     style: {
       color: syncMode === "offline" ? "#C9B48A" : "#D9A0A8",
@@ -1818,9 +1727,14 @@ function CellarBook() {
         }
       }, b.pos, ". ") : null, b.name, b.qty > 1 ? ` ×${b.qty}` : ""), /*#__PURE__*/React.createElement("div", {
         className: "vt"
-      }, b.vintage, /hold/i.test(b.window?.status || "") ? /*#__PURE__*/React.createElement("span", {
-        className: "hold"
-      }, " · hold") : "")))), rowAll.length > 0 && row.length === 0 && /*#__PURE__*/React.createElement("span", {
+      }, b.vintage, (() => {
+        const bk = windowBucket(b.window);
+        return bk === "Ready" ? null : /*#__PURE__*/React.createElement("span", {
+          style: {
+            color: BUCKET_COLOR[bk]
+          }
+        }, " · ", bk.toLowerCase());
+      })())))), rowAll.length > 0 && row.length === 0 && /*#__PURE__*/React.createElement("span", {
         style: {
           color: "#6E5C64",
           fontSize: 13
@@ -1830,7 +1744,9 @@ function CellarBook() {
   }), /*#__PURE__*/React.createElement("div", {
     className: "cb-note"
   }, "Bottle identities are photo-verified. Windows tagged \"estimate\" are general knowledge, not vintage-checked. This app is the master record; ask Claude in chat to refresh the project docs from an Export.")), view === "maturity" && /*#__PURE__*/React.createElement(MaturityView, {
-    bottles: stock,
+    bottles: stock.filter(match),
+    allCount: stock.length,
+    query: q,
     onSelect: setSelected
   }), view === "photo" && /*#__PURE__*/React.createElement(PhotoAdd, {
     onAdd: addBottle
@@ -1840,6 +1756,7 @@ function CellarBook() {
   }), view === "pairing" && /*#__PURE__*/React.createElement(Pairing, {
     bottles: stock,
     imgs: imgs,
+    taste: tasteProfileText(tasteProfile),
     state: pairState,
     setState: setPairState,
     onSave: savePairing,
@@ -1856,7 +1773,7 @@ function CellarBook() {
   }, "Nothing logged yet."), (() => {
     const byKey = {};
     const groups = [];
-    consumed.forEach(c => {
+    consumed.filter(match).forEach(c => {
       const k = (c.name || "?") + "|" + (c.vintage || "");
       if (!byKey[k]) {
         byKey[k] = {
@@ -1920,6 +1837,7 @@ function CellarBook() {
     onClose: () => setSelected(null),
     onConsume: markConsumed,
     onMove: moveTo,
+    onSetWindow: setWindow,
     onConfirmPresent: confirmPresent,
     onClear: clearUnconfirmed
   }), (saveState || sync.state !== "idle") && /*#__PURE__*/React.createElement("div", {
@@ -1991,120 +1909,167 @@ function PairingRow({
   }, "Cancel"))));
 }
 
-// ---------- Maturity curves ----------
+// ---------- Maturity: numbered range + bell, both derived from the window ----------
+// There is no curve table any more. The bell is a PICTURE of window.from and
+// window.to, nothing else, so it can never disagree with the master. The
+// confidence lives where it belongs: on the years, tagged verified/estimate.
 function MaturityView({
   bottles,
+  allCount,
+  query,
   onSelect
 }) {
-  const Y0 = 2024,
-    Y1 = 2042;
-  const now = new Date();
-  const nowYear = now.getFullYear() + now.getMonth() / 12;
+  const nowY = nowFrac();
+  const yi = Math.floor(nowY);
+
+  // The axis spans the data plus a margin, rather than a decade hardcoded in
+  // 2026 that would quietly clip everything by 2043.
+  const pts = [yi];
+  bottles.forEach(b => {
+    const n = normWindow(b.window);
+    if (n.from !== null) pts.push(n.from);
+    if (n.to !== null) pts.push(n.to);
+    const v = parseInt(b.vintage, 10);
+    if (!isNaN(v)) pts.push(v);
+  });
+  const Y0 = Math.min.apply(null, pts.concat([yi - 1]));
+  const Y1 = Math.max.apply(null, pts.concat([yi + 6]));
   const W = 560,
     H = 46,
     PAD = 4;
-  const x = yr => PAD + (Math.min(Math.max(yr, Y0), Y1) - Y0) / (Y1 - Y0) * (W - 2 * PAD);
+  const x = yr => PAD + (Math.min(Math.max(yr, Y0), Y1) - Y0) / Math.max(1, Y1 - Y0) * (W - 2 * PAD);
   const yb = H - 8,
     yt = 10;
-  const pathFor = c => {
-    if (c.shape === "plateau") {
-      const xf = x(c.from),
-        xu = x(c.until),
-        r = 14;
-      return `M ${xf} ${yb} C ${xf + r * 0.4} ${yt}, ${xf + r} ${yt}, ${xf + r + 4} ${yt} L ${xu - r - 4} ${yt} C ${xu - r} ${yt}, ${xu - r * 0.4} ${yb}, ${xu} ${yb}`;
-    }
-    const xf = x(c.from),
-      xps = x(c.ps),
-      xpe = x(c.pe),
-      xu = x(c.until);
-    return `M ${xf} ${yb} C ${xf + (xps - xf) * 0.5} ${yb}, ${xps - (xps - xf) * 0.3} ${yt}, ${xps} ${yt} L ${xpe} ${yt} C ${xpe + (xu - xpe) * 0.3} ${yt}, ${xu - (xu - xpe) * 0.5} ${yb}, ${xu} ${yb}`;
-  };
-  const statusFor = c => {
-    if (c.shape === "plateau") return nowYear <= c.until ? "in window" : "past window";
-    if (nowYear < c.from) return "too young";
-    if (nowYear < c.ps) return "approaching";
-    if (nowYear <= c.pe) return "in the peak";
-    if (nowYear <= c.until) return "drink up";
-    return "past window";
-  };
-  const withCurve = bottles.filter(b => CURVES[b.id]);
-  const without = bottles.filter(b => !CURVES[b.id]);
-  const sorted = [...withCurve].sort((a, b2) => {
-    const ca = CURVES[a.id],
-      cb = CURVES[b2.id];
-    return (ca.ps || ca.from) - (cb.ps || cb.from);
-  });
+  const step = Y1 - Y0 > 24 ? 4 : 2;
   const years = [];
-  for (let y = Y0; y <= Y1; y += 2) years.push(y);
+  for (let y = Math.ceil(Y0 / step) * step; y <= Y1; y += step) years.push(y);
+  const pathFor = (n, vintage) => {
+    const v = parseInt(vintage, 10);
+    const L = n.from !== null ? n.from : !isNaN(v) ? Math.min(v, yi) : Y0;
+    const R = n.to !== null ? n.to : Y1;
+    const xL = x(L),
+      xR = x(R),
+      span = Math.max(8, xR - xL);
+    const rise = n.from !== null ? Math.min(span * 0.38, 70) : 0;
+    const fall = n.to !== null ? Math.min(span * 0.38, 70) : 0;
+    const p1 = xL + rise,
+      p2 = Math.max(xL + rise, xR - fall);
+    let d = rise > 0 ? "M " + xL + " " + yb + " C " + (xL + rise * 0.55) + " " + yb + ", " + (p1 - rise * 0.45) + " " + yt + ", " + p1 + " " + yt + " " : "M " + xL + " " + yt + " ";
+    d += "L " + p2 + " " + yt + " ";
+    d += fall > 0 ? "C " + (xR - fall * 0.45) + " " + yt + ", " + (xR - fall * 0.55) + " " + yb + ", " + xR + " " + yb : "L " + xR + " " + yt;
+    return d;
+  };
+  const rows = bottles.map(b => ({
+    b,
+    n: normWindow(b.window),
+    bk: windowBucket(b.window)
+  }));
+  const order = {
+    "Drink soon": 0,
+    "Ready": 1,
+    "Hold": 2,
+    "Past window": 3,
+    "Unclassified": 4
+  };
+  rows.sort((a, c) => order[a.bk] - order[c.bk] || (a.n.to === null ? 9999 : a.n.to) - (c.n.to === null ? 9999 : c.n.to) || String(a.b.name).localeCompare(String(c.b.name)));
+  const counts = {};
+  BUCKETS.forEach(k => counts[k] = rows.filter(r => r.bk === k).length);
+  const closing = rows.filter(r => IN_WINDOW.includes(r.bk) && r.n.to !== null).sort((a, c) => a.n.to - c.n.to).slice(0, 6);
+  const past = rows.filter(r => r.bk === "Past window");
+  const unc = rows.filter(r => r.bk === "Unclassified");
   return /*#__PURE__*/React.createElement("div", {
     className: "cb-panel",
     style: {
       maxWidth: 720
     }
-  }, /*#__PURE__*/React.createElement("h2", null, "Maturity"), (() => {
-    // Deterministic, no model call: ranked purely on the curves below.
-    const rows = bottles.filter(b => CURVES[b.id]).map(b => ({
-      b,
-      c: CURVES[b.id],
-      st: statusFor(CURVES[b.id])
-    }));
-    const closing = rows.filter(r => r.st !== "too young" && r.st !== "past window").sort((a, b2) => a.c.until - b2.c.until).slice(0, 6);
-    const past = rows.filter(r => r.st === "past window");
-    if (closing.length === 0 && past.length === 0) return null;
-    return /*#__PURE__*/React.createElement("div", {
-      className: "cb-field",
-      style: {
-        background: "#241A1F",
-        border: "1px solid #3A2A31",
-        borderRadius: 10,
-        padding: 12
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "lbl"
-    }, "Open next — closest to the end of its window"), closing.map(r => /*#__PURE__*/React.createElement("div", {
-      key: r.b.id,
-      className: "val",
-      style: {
-        display: "flex",
-        gap: 8,
-        alignItems: "baseline",
-        flexWrap: "wrap",
-        marginTop: 4,
-        cursor: "pointer"
-      },
-      onClick: () => onSelect(r.b)
-    }, /*#__PURE__*/React.createElement("span", null, r.b.name, " ", /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: "#B3A1A9",
-        fontSize: 12
-      }
-    }, r.b.vintage)), /*#__PURE__*/React.createElement("span", {
-      className: "cb-tag " + r.c.source
-    }, r.c.source), /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 12,
-        color: "#C9B4BC"
-      }
-    }, r.st, " · to ~", r.c.until, " (", Math.max(0, Math.round((r.c.until - nowYear) * 10) / 10), " yr left)"))), past.length > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "val",
-      style: {
-        marginTop: 8,
-        color: "#D9A0A8"
-      }
-    }, "Past their estimated window: ", past.map(r => r.b.name + " " + r.b.vintage).join(" · "), ". These are estimates, not verdicts. Taste before you write one off."), /*#__PURE__*/React.createElement("div", {
-      className: "val",
-      style: {
-        fontSize: 12,
-        color: "#A5929B",
-        marginTop: 8
-      }
-    }, "Ranked on the curves below, most of which are tagged estimate. An order built on estimates is itself an estimate."));
-  })(), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("h2", null, "Maturity"), query && /*#__PURE__*/React.createElement("div", {
     className: "cb-field"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "val"
-  }, "Solid curve = readiness we established together. Dashed curve with a band = estimate from grape, region and tier, not vintage-checked. Flat-topped shapes are bottled-mature wines (Colheita, NV) — they hold, they do not improve, so a bell would be a lie. The vertical line is today. Status labels inherit their curve's tag: an \"in the peak\" on a dashed curve is itself an estimate.")), /*#__PURE__*/React.createElement("svg", {
-    viewBox: `0 0 ${W} 16`,
+    className: "val",
+    style: {
+      fontSize: 13,
+      color: "#C9A87C"
+    }
+  }, "Showing ", bottles.length, " of ", allCount, " bottles, filtered by the search box.")), /*#__PURE__*/React.createElement("div", {
+    className: "cb-field",
+    style: {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap"
+    }
+  }, BUCKETS.map(k => /*#__PURE__*/React.createElement("span", {
+    key: k,
+    style: {
+      fontSize: 12.5,
+      color: BUCKET_COLOR[k],
+      border: "1px solid #3A2A31",
+      borderRadius: 20,
+      padding: "3px 10px"
+    }
+  }, k, " ", counts[k]))), (closing.length > 0 || past.length > 0 || unc.length > 0) && /*#__PURE__*/React.createElement("div", {
+    className: "cb-field",
+    style: {
+      background: "#241A1F",
+      border: "1px solid #3A2A31",
+      borderRadius: 10,
+      padding: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lbl"
+  }, "Open next — closest to the end of its window"), closing.length === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "val",
+    style: {
+      fontSize: 13
+    }
+  }, "Nothing has a dated end in this view."), closing.map(r => /*#__PURE__*/React.createElement("div", {
+    key: r.b.id,
+    className: "val",
+    style: {
+      display: "flex",
+      gap: 8,
+      alignItems: "baseline",
+      flexWrap: "wrap",
+      marginTop: 4,
+      cursor: "pointer"
+    },
+    onClick: () => onSelect(r.b)
+  }, /*#__PURE__*/React.createElement("span", null, r.b.name, " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#B3A1A9",
+      fontSize: 12
+    }
+  }, r.b.vintage)), /*#__PURE__*/React.createElement("span", {
+    className: "cb-tag " + r.n.source
+  }, r.n.source), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: BUCKET_COLOR[r.bk]
+    }
+  }, r.bk, " · ", windowRange(r.b.window), " · ", Math.max(0, Math.round((r.n.to + 1 - nowY) * 10) / 10), " yr left"))), past.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "val",
+    style: {
+      marginTop: 8,
+      color: BUCKET_COLOR["Past window"]
+    }
+  }, "Past the recorded window: ", past.map(r => r.b.name + " " + r.b.vintage).join(" · "), ". A recorded end year is not a verdict. Taste before writing one off."), unc.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "val",
+    style: {
+      marginTop: 8,
+      color: BUCKET_COLOR["Unclassified"]
+    }
+  }, "No window set: ", unc.map(r => r.b.name + " " + r.b.vintage).join(" · "), ". These are listed, never hidden, and never given a guessed year.")), /*#__PURE__*/React.createElement("div", {
+    className: "cb-field"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "val",
+    style: {
+      fontSize: 13.5
+    }
+  }, "The number range is the window as recorded. The curve is a drawing of that same range and carries no extra information — a rise into the first year, a plateau, a fall into the last. Flat with no ends means open ended. The vertical line is today, read from the clock, so it moves on its own. Confidence sits on the years: ", /*#__PURE__*/React.createElement("span", {
+    className: "cb-tag verified"
+  }, "verified"), " established together, ", /*#__PURE__*/React.createElement("span", {
+    className: "cb-tag estimate"
+  }, "estimate"), " general knowledge, not vintage-checked.")), /*#__PURE__*/React.createElement("svg", {
+    viewBox: "0 0 " + W + " 16",
     style: {
       width: "100%",
       display: "block",
@@ -2118,10 +2083,16 @@ function MaturityView({
     fontSize: "9",
     textAnchor: "middle",
     fontFamily: "Jost, sans-serif"
-  }, y))), sorted.map(b => {
-    const c = CURVES[b.id];
-    const est = c.source !== "verified";
-    const st = statusFor(c);
+  }, y))), rows.length === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "cb-field"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "val"
+  }, "No bottles match.")), rows.map(({
+    b,
+    n,
+    bk
+  }) => {
+    const est = n.source !== "verified";
     return /*#__PURE__*/React.createElement("div", {
       key: b.id,
       style: {
@@ -2146,14 +2117,34 @@ function MaturityView({
         fontSize: 12
       }
     }, b.vintage, b.qty > 1 ? " ×" + b.qty : "")), /*#__PURE__*/React.createElement("span", {
-      className: "cb-tag " + c.source
-    }, c.source), /*#__PURE__*/React.createElement("span", {
+      className: "cb-tag " + (n.source === "verified" ? "verified" : "estimate")
+    }, n.source), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 13,
+        color: BUCKET_COLOR[bk]
+      }
+    }, bk), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 13,
+        color: "#E8D9C8",
+        fontFamily: "Jost, sans-serif"
+      }
+    }, windowRange(b.window)), n.decant !== null && /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 12,
-        color: st === "in the peak" || st === "in window" ? "#9FC9A8" : st === "too young" ? "#C9A87C" : "#C9B4BC"
+        color: "#C9A87C"
       }
-    }, st)), /*#__PURE__*/React.createElement("svg", {
-      viewBox: `0 0 ${W} ${H}`,
+    }, "decant ", n.decant, " min")), n.unknown ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12.5,
+        color: BUCKET_COLOR["Unclassified"],
+        border: "1px dashed #3A2A31",
+        borderRadius: 8,
+        padding: "10px 12px",
+        marginTop: 4
+      }
+    }, "No window recorded, so no curve is drawn. Nothing is inferred from the vintage.") : /*#__PURE__*/React.createElement("svg", {
+      viewBox: "0 0 " + W + " " + H,
       style: {
         width: "100%",
         display: "block",
@@ -2169,39 +2160,34 @@ function MaturityView({
       y2: H - 2,
       stroke: "#33262C",
       strokeWidth: "1"
-    })), est && /*#__PURE__*/React.createElement("path", {
-      d: pathFor(c),
-      fill: "rgba(201,180,138,0.10)",
-      stroke: "none",
-      transform: `translate(0,-2)`
-    }), /*#__PURE__*/React.createElement("path", {
-      d: pathFor(c),
-      fill: est ? "none" : "rgba(159,201,168,0.12)",
+    })), /*#__PURE__*/React.createElement("path", {
+      d: pathFor(n, b.vintage),
+      fill: est ? "rgba(201,180,138,0.10)" : "rgba(159,201,168,0.12)",
       stroke: est ? "#C9B48A" : "#9FC9A8",
       strokeWidth: "1.8",
       strokeDasharray: est ? "5 4" : "none",
       strokeLinecap: "round"
     }), /*#__PURE__*/React.createElement("line", {
-      x1: x(nowYear),
-      x2: x(nowYear),
+      x1: x(nowY),
+      x2: x(nowY),
       y1: 2,
       y2: H - 2,
       stroke: "#A63D4E",
       strokeWidth: "1.6"
-    })), c.note && /*#__PURE__*/React.createElement("div", {
+    })), openDaysText(b.openDays) && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11.5,
+        color: "#8FA9B0",
+        marginTop: 3
+      }
+    }, openDaysText(b.openDays)), n.detail && /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 11.5,
         color: "#A5929B",
         marginTop: 3
       }
-    }, c.note));
-  }), without.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "cb-field"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "lbl"
-  }, "No curve yet"), /*#__PURE__*/React.createElement("div", {
-    className: "val"
-  }, without.map(b => b.name + " " + b.vintage).join(" · "), " — added after the last assessment pass. Export and ask Claude in chat to assess.")));
+    }, n.detail));
+  }));
 }
 
 // ---------- Photo intake: label read -> verification -> commit ----------
@@ -2216,6 +2202,10 @@ function PhotoAdd({
     className: "val"
   }, "Reading labels needs the Claude brain, which this standalone copy does not have yet. Two ways that work today: add the bottle under Add manually, or send the label photo to Claude in chat — it writes to the same cellar this app reads. To enable label reading here, add a Claude API key under Sync.")));
   const [img, setImg] = useState(null);
+  const [win, setWin] = useState({
+    ...BLANK_WINDOW,
+    detail: "Not assessed yet."
+  });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [draft, setDraft] = useState(null);
@@ -2277,6 +2267,11 @@ Only state what is literally on the label or safely inferable from producer/appe
       setErr("Name is required before saving.");
       return;
     }
+    const we = windowError(win);
+    if (we) {
+      setErr(we);
+      return;
+    }
     onAdd({
       id: "b" + Date.now(),
       name: draft.name,
@@ -2286,11 +2281,7 @@ Only state what is literally on the label or safely inferable from producer/appe
       region: draft.region,
       loc: draft.loc,
       qty: Math.max(1, Number(draft.qty) || 1),
-      window: {
-        status: "Not assessed",
-        detail: "Ask Claude in chat for a window; it syncs back via Dropbox.",
-        source: "estimate"
-      },
+      window: normWindow(win),
       notes: "Added by photo, user-verified. Label-read note: " + (draft.confidence || "none")
     }, img?.preview);
   };
@@ -2398,7 +2389,7 @@ Only state what is literally on the label or safely inferable from producer/appe
   }, LOCATIONS.map(l => /*#__PURE__*/React.createElement("option", {
     key: l.id,
     value: l.id
-  }, l.group, l.group !== l.label ? " — " + l.label : "")))), /*#__PURE__*/React.createElement("div", {
+  }, locLabel(l.id))))), /*#__PURE__*/React.createElement("div", {
     className: "cb-field"
   }, /*#__PURE__*/React.createElement("div", {
     className: "lbl"
@@ -2411,7 +2402,10 @@ Only state what is literally on the label or safely inferable from producer/appe
       ...draft,
       qty: e.target.value
     })
-  })), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(WindowEditor, {
+    value: win,
+    onChange: setWin
+  }), /*#__PURE__*/React.createElement("div", {
     className: "cb-actions"
   }, /*#__PURE__*/React.createElement("button", {
     className: "cb-btn",
@@ -2427,6 +2421,199 @@ Only state what is literally on the label or safely inferable from producer/appe
   }, "Nothing is saved until you confirm the fields. The read note tells you what came off the label vs what was inferred."));
 }
 
+// ---------- Window editor ----------
+// ONE component, used by manual add, photo add and the bottle detail. The
+// three-way state is DERIVED from the data every render and never stored, so
+// there is no fourth field that can contradict from/to/unknown.
+function windowError(w) {
+  const n = normWindow(w);
+  if (n.unknown) return "";
+  const bad = v => v !== null && (!isFinite(v) || v < 1900 || v > 2100);
+  if (bad(n.from)) return "Ready-from must be a year between 1900 and 2100.";
+  if (bad(n.to)) return "Drink-by must be a year between 1900 and 2100.";
+  if (n.from !== null && n.to !== null && n.to < n.from) return "Drink-by cannot be earlier than ready-from.";
+  if (n.decant !== null && (n.decant < 0 || n.decant > 1440)) return "Decant minutes must be between 0 and 1440.";
+  return "";
+}
+const BLANK_WINDOW = {
+  from: null,
+  to: null,
+  unknown: true,
+  decant: null,
+  detail: "",
+  source: "estimate"
+};
+function WindowEditor({
+  value,
+  onChange
+}) {
+  const n = normWindow(value);
+  const mode = n.unknown ? "unknown" : n.from === null && n.to === null ? "open" : "dated";
+  const err = windowError(value);
+  const set = patch => onChange({
+    ...n,
+    ...patch
+  });
+  const num = v => {
+    const s = String(v).trim();
+    if (!s) return null;
+    const k = parseInt(s, 10);
+    return isNaN(k) ? null : k;
+  };
+  const MODES = [["unknown", "Unknown", "Goes to Unclassified. Nothing is guessed."], ["open", "No deadline", "Ready now and stays ready. Colheita, tawny, spirits."], ["dated", "Dated", "One or both years known."]];
+  return /*#__PURE__*/React.createElement("div", {
+    className: "cb-field",
+    style: {
+      border: "1px solid #3A2A31",
+      borderRadius: 10,
+      padding: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lbl"
+  }, "Drinking window"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap",
+      margin: "4px 0 8px"
+    }
+  }, MODES.map(([id, lbl]) => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    className: "cb-tab" + (mode === id ? " on" : ""),
+    onClick: () => set(id === "unknown" ? {
+      from: null,
+      to: null,
+      unknown: true
+    } : id === "open" ? {
+      from: null,
+      to: null,
+      unknown: false
+    } : {
+      unknown: false
+    })
+  }, lbl))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: "#A5929B",
+      marginBottom: 8
+    }
+  }, (MODES.find(m => m[0] === mode) || [])[2]), mode === "dated" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: "1 1 130px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lbl"
+  }, "Ready from"), /*#__PURE__*/React.createElement("input", {
+    className: "cb-input",
+    type: "number",
+    placeholder: "blank = ready now",
+    value: n.from === null ? "" : n.from,
+    onChange: e => set({
+      from: num(e.target.value),
+      unknown: false
+    })
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: "1 1 130px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lbl"
+  }, "Drink by"), /*#__PURE__*/React.createElement("input", {
+    className: "cb-input",
+    type: "number",
+    placeholder: "blank = no deadline",
+    value: n.to === null ? "" : n.to,
+    onChange: e => set({
+      to: num(e.target.value),
+      unknown: false
+    })
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10,
+      flexWrap: "wrap",
+      marginTop: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: "1 1 130px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lbl"
+  }, "Decant, minutes"), /*#__PURE__*/React.createElement("input", {
+    className: "cb-input",
+    type: "number",
+    placeholder: "blank = none",
+    value: n.decant === null ? "" : n.decant,
+    onChange: e => set({
+      decant: num(e.target.value)
+    })
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: "1 1 130px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lbl"
+  }, "Source"), /*#__PURE__*/React.createElement("select", {
+    className: "cb-select",
+    value: n.source,
+    onChange: e => set({
+      source: e.target.value
+    })
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "verified"
+  }, "verified"), /*#__PURE__*/React.createElement("option", {
+    value: "estimate"
+  }, "estimate"), /*#__PURE__*/React.createElement("option", {
+    value: "unknown"
+  }, "unknown")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lbl"
+  }, "Note — for your eyes only, never parsed"), /*#__PURE__*/React.createElement("textarea", {
+    className: "cb-area",
+    style: {
+      minHeight: 56
+    },
+    value: n.detail,
+    onChange: e => set({
+      detail: e.target.value
+    })
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      fontSize: 13
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#A5929B"
+    }
+  }, "Will read: "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#E8D9C8"
+    }
+  }, windowRange(n)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: BUCKET_COLOR[windowBucket(n)],
+      marginLeft: 8
+    }
+  }, windowBucket(n))), err && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      color: "#D08770",
+      fontSize: 13
+    }
+  }, err));
+}
+
 // ---------- Manual add ----------
 function ManualAdd({
   onAdd,
@@ -2437,27 +2624,41 @@ function ManualAdd({
     vintage: "",
     type: "red",
     loc: "unassigned",
+    pos: "",
     grapes: "",
     region: "",
     qty: 1,
     notes: ""
   });
+  const [win, setWin] = useState({
+    ...BLANK_WINDOW,
+    detail: "Not assessed yet."
+  });
+  const [err, setErr] = useState("");
   const set = (k, v) => setF(x => ({
     ...x,
     [k]: v
   }));
+  const slotted = (LOC_BY_ID[f.loc] || {}).ordered;
   const submit = () => {
-    if (!f.name.trim()) return;
-    onAdd({
+    if (!f.name.trim()) {
+      setErr("Name is required.");
+      return;
+    }
+    const we = windowError(win);
+    if (we) {
+      setErr(we);
+      return;
+    }
+    const pos = slotted ? Math.max(1, Math.min(SLOTS, Number(f.pos) || 1)) : null;
+    const rec = {
       id: "b" + Date.now(),
       ...f,
       qty: Math.max(1, Number(f.qty) || 1),
-      window: {
-        status: "Not assessed",
-        detail: "Ask Claude in chat for a window.",
-        source: "estimate"
-      }
-    });
+      window: normWindow(win)
+    };
+    if (pos === null) delete rec.pos;else rec.pos = pos;
+    onAdd(rec);
   };
   return /*#__PURE__*/React.createElement("div", {
     className: "cb-panel"
@@ -2493,7 +2694,18 @@ function ManualAdd({
   }, LOCATIONS.map(l => /*#__PURE__*/React.createElement("option", {
     key: l.id,
     value: l.id
-  }, l.group, l.group !== l.label ? " — " + l.label : "")))), /*#__PURE__*/React.createElement("div", {
+  }, locLabel(l.id))))), slotted && /*#__PURE__*/React.createElement("div", {
+    className: "cb-field"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lbl"
+  }, "Position on that shelf (1 = leftmost, 1–", SLOTS, ")"), /*#__PURE__*/React.createElement("input", {
+    className: "cb-input",
+    type: "number",
+    min: "1",
+    max: SLOTS,
+    value: f.pos,
+    onChange: e => set("pos", e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
     className: "cb-field"
   }, /*#__PURE__*/React.createElement("div", {
     className: "lbl"
@@ -2503,7 +2715,17 @@ function ManualAdd({
     min: "1",
     value: f.qty,
     onChange: e => set("qty", e.target.value)
-  })), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(WindowEditor, {
+    value: win,
+    onChange: setWin
+  }), err && /*#__PURE__*/React.createElement("div", {
+    className: "cb-field"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "val",
+    style: {
+      color: "#D08770"
+    }
+  }, err)), /*#__PURE__*/React.createElement("div", {
     className: "cb-actions"
   }, /*#__PURE__*/React.createElement("button", {
     className: "cb-btn",
@@ -2521,7 +2743,8 @@ function Pairing({
   onLocate,
   onSave,
   state,
-  setState
+  setState,
+  taste
 }) {
   if (!getClaudeKey()) return /*#__PURE__*/React.createElement("div", {
     className: "cb-panel"
@@ -2662,7 +2885,7 @@ function Pairing({
     setErr("");
     setRes(null);
     setRaw("");
-    const inv = bottles.map(b => `- ${b.name} ${b.vintage} (${b.type}${b.grapes ? ", " + b.grapes : ""}${b.region ? ", " + b.region : ""}) — window: ${b.window?.status || "?"} [${b.window?.source || "?"}]${b.pairing ? " — pairing notes: " + b.pairing : ""} — location: ${(LOCATIONS.find(l => l.id === b.loc) || {}).label || b.loc}${b.pos ? " position " + b.pos : ""}, qty ${b.qty}`).join("\n");
+    const inv = bottles.map(b => `- ${b.name} ${b.vintage} (${b.type}${b.grapes ? ", " + b.grapes : ""}${b.region ? ", " + b.region : ""}) — window: ${windowRange(b.window)} (${windowBucket(b.window)}) [${normWindow(b.window).source}]${normWindow(b.window).decant !== null ? ", decant " + normWindow(b.window).decant + " min" : ""}${b.pairing ? " — pairing notes: " + b.pairing : ""} — location: ${(LOCATIONS.find(l => l.id === b.loc) || {}).label || b.loc}${b.pos ? " position " + b.pos : ""}, qty ${b.qty}`).join("\n");
     const qaBlock = qaList.length ? "\nCLARIFICATIONS — you asked, the owner answered:\n" + qaList.map(x => "Q: " + x.q + "\nA: " + x.a).join("\n") + "\n" : "";
     try {
       const text = await askClaude([{
@@ -2671,7 +2894,7 @@ function Pairing({
 
 Address the owner as "you" in every field — never "he", "the owner", or third person.
 
-${TASTE_PROFILE}
+${taste || TASTE_PROFILE}
 
 CURRENT INVENTORY:
 ${inv}
@@ -2976,6 +3199,7 @@ function SyncPanel({
     exported: new Date().toISOString(),
     schema: SCHEMA_VERSION,
     note: masterNote,
+    tasteProfile,
     bottles,
     consumed,
     pairings
@@ -3386,6 +3610,7 @@ function Detail({
   onClose,
   onConsume,
   onMove,
+  onSetWindow,
   onConfirmPresent,
   onClear
 }) {
@@ -3393,6 +3618,12 @@ function Detail({
   const [verdict, setVerdict] = useState("");
   const [foundIn, setFoundIn] = useState("basement");
   const [clearing, setClearing] = useState(false);
+  const [editingWin, setEditingWin] = useState(false);
+  const [winDraft, setWinDraft] = useState(normWindow(bottle.window));
+  useEffect(() => {
+    setWinDraft(normWindow(bottle.window));
+    setEditingWin(false);
+  }, [bottle.id]);
   return /*#__PURE__*/React.createElement("div", {
     className: "cb-modal-bg",
     onClick: onClose
@@ -3433,7 +3664,7 @@ function Detail({
   }, LOCATIONS.filter(l => l.id !== "unconfirmed").map(l => /*#__PURE__*/React.createElement("option", {
     key: l.id,
     value: l.id
-  }, l.group, l.group !== l.label ? " — " + l.label : ""))), /*#__PURE__*/React.createElement("div", {
+  }, locLabel(l.id)))), /*#__PURE__*/React.createElement("div", {
     className: "cb-actions"
   }, /*#__PURE__*/React.createElement("button", {
     className: "cb-btn",
@@ -3494,15 +3725,68 @@ function Detail({
     className: "lbl"
   }, "Region"), /*#__PURE__*/React.createElement("div", {
     className: "val"
-  }, bottle.region)), bottle.window && /*#__PURE__*/React.createElement("div", {
+  }, bottle.region)), /*#__PURE__*/React.createElement("div", {
     className: "cb-field"
   }, /*#__PURE__*/React.createElement("div", {
     className: "lbl"
   }, "Drinking window ", /*#__PURE__*/React.createElement("span", {
-    className: "cb-tag " + bottle.window.source
-  }, bottle.window.source)), /*#__PURE__*/React.createElement("div", {
+    className: "cb-tag " + (normWindow(bottle.window).source === "verified" ? "verified" : "estimate")
+  }, normWindow(bottle.window).source)), !editingWin ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "val"
-  }, /*#__PURE__*/React.createElement("strong", null, bottle.window.status), bottle.window.detail ? " — " + bottle.window.detail : "")), bottle.pairing && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("strong", null, windowRange(bottle.window)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: BUCKET_COLOR[windowBucket(bottle.window)],
+      marginLeft: 10
+    }
+  }, windowBucket(bottle.window)), normWindow(bottle.window).decant !== null && /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#C9A87C",
+      marginLeft: 10
+    }
+  }, "decant ", normWindow(bottle.window).decant, " min")), normWindow(bottle.window).detail && /*#__PURE__*/React.createElement("div", {
+    className: "val",
+    style: {
+      fontSize: 13.5,
+      color: "#B3A1A9",
+      marginTop: 4
+    }
+  }, normWindow(bottle.window).detail), normWindow(bottle.window).legacy && /*#__PURE__*/React.createElement("div", {
+    className: "val",
+    style: {
+      fontSize: 12.5,
+      color: "#D08770",
+      marginTop: 4
+    }
+  }, "This record still carries a v1.7 status string. It is held in Unclassified rather than guessed at — set the years here."), /*#__PURE__*/React.createElement("div", {
+    className: "cb-actions"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "cb-btn ghost",
+    onClick: () => setEditingWin(true)
+  }, "Edit window"))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(WindowEditor, {
+    value: winDraft,
+    onChange: setWinDraft
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "cb-actions"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "cb-btn",
+    disabled: !!windowError(winDraft),
+    onClick: () => {
+      onSetWindow(bottle, winDraft);
+      setEditingWin(false);
+    }
+  }, "Save window"), /*#__PURE__*/React.createElement("button", {
+    className: "cb-btn ghost",
+    onClick: () => {
+      setWinDraft(normWindow(bottle.window));
+      setEditingWin(false);
+    }
+  }, "Cancel")))), openDaysText(bottle.openDays) && /*#__PURE__*/React.createElement("div", {
+    className: "cb-field"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lbl"
+  }, "Once opened"), /*#__PURE__*/React.createElement("div", {
+    className: "val"
+  }, openDaysText(bottle.openDays))), bottle.pairing && /*#__PURE__*/React.createElement("div", {
     className: "cb-field"
   }, /*#__PURE__*/React.createElement("div", {
     className: "lbl"
@@ -3525,7 +3809,14 @@ function Detail({
   }, LOCATIONS.map(l => /*#__PURE__*/React.createElement("option", {
     key: l.id,
     value: l.id
-  }, l.group, l.group !== l.label ? " — " + l.label : "")))), !confirming ? /*#__PURE__*/React.createElement("div", {
+  }, locLabel(l.id)))), (LOC_BY_ID[bottle.loc] || {}).ordered && /*#__PURE__*/React.createElement("div", {
+    className: "val",
+    style: {
+      fontSize: 12.5,
+      color: "#A5929B",
+      marginTop: 6
+    }
+  }, "Position ", bottle.pos || "not set", " of ", SLOTS, ", counting from the left.")), !confirming ? /*#__PURE__*/React.createElement("div", {
     className: "cb-actions"
   }, /*#__PURE__*/React.createElement("button", {
     className: "cb-btn",
