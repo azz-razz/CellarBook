@@ -320,7 +320,7 @@ var d=null!=c&&c.hydratedSources||null,e=!1,f="",g=aj;null!==c&&void 0!==c&&(!0=
 function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmountComponentAtNode=function(a){if(!Vd(a))throw Error(m(40));return a._reactRootContainer?(yb(function(){Wd(null,null,a,!1,function(){a._reactRootContainer=null;a[Ja]=null})}),!0):!1};Q.unstable_batchedUpdates=Tf;Q.unstable_renderSubtreeIntoContainer=function(a,b,c,d){if(!Vd(c))throw Error(m(200));if(null==a||void 0===a._reactInternals)throw Error(m(38));return Wd(a,b,c,!1,d)};Q.version="18.3.1-next-f1338f8080-20240426"});
 })();
 </script>
-<script>// Web build 1.9.0: public GitHub Pages copy. Privacy-stripped by design --
+<script>// Web build 1.9.1: public GitHub Pages copy. Privacy-stripped by design --
 // empty seed, anonymised taste profile, no personal file paths. The real
 // cellar arrives from Dropbox after connecting, on your device only.
 const {
@@ -338,7 +338,7 @@ const {
 // Provenance discipline: every window/pairing tagged verified|estimate.
 // ================================================================
 
-const APP_VERSION = "1.9.0 web";
+const APP_VERSION = "1.9.1 web";
 const TYPE_META = {
   red: {
     label: "Red",
@@ -366,7 +366,7 @@ const TYPE_META = {
 // The kitchen fridge is not one bucket: it has a wine rack with an ordered
 // left-to-right sequence, and a door. v1.5.4 and earlier collapsed both into
 // "kitchen", which is why the app could not show you what you actually have.
-// Location model, v1.9.0 (ruled 2026-08-21). Every wine-fridge shelf and the
+// Location model, v1.9.1 (ruled 2026-08-21). Every wine-fridge shelf and the
 // kitchen rack is an ORDERED run of 4 slots carrying pos 1-4, left to right.
 // Through v1.7.2 only krack was ordered and shelf order lived in free text --
 // the same fault as the Maturity tab, one field over. "kitchen" is retired:
@@ -445,7 +445,7 @@ const STOCK_GROUPS = ["Wine fridge", "Kitchen fridge", "Library", "Basement", "J
 // verbatim rack statement. v1.5.8 carries it through pull, cache, push and
 // backup. MASTER_NOTE below is the corrected text for the v1.5.8 location
 // vocabulary; it is never applied silently, only by the button in Sync.
-const MASTER_NOTE = "LOCATION MODEL, CellarBook v1.9.0. wf1-wf4 = wine fridge shelves, top to bottom, EACH with a pos field 1-4 left to right. krack = kitchen fridge wine rack, pos 1-4 left to right. kdoor = kitchen fridge door. kdrawer = kitchen fridge vegetable drawer (replaces the retired 'kitchen' code). library = library shelf, room temperature. basement = basement cellar. unassigned = added but not yet placed. unconfirmed = open question, excluded from every count and never sent to the sommelier. WINDOW SCHEMA v3: window.from = first year good to drink, null means ready on release; window.to = last year, null means no meaningful limit unopened; window.unknown = true forces the Unclassified bucket regardless of years; window.decant = minutes advised, null means none; window.detail = prose for human eyes only, NEVER parsed; window.source = verified or estimate. The old window.status prose string is DELETED. Maturity computes buckets from the current year: unknown -> Unclassified; year < from -> Hold; from <= year <= to -> Ready, and Drink soon when to is set and one year or less away; year > to -> Past window. Nothing can fall out of every bucket. openDays = {min,max} days of useful life once opened and refrigerated; max null means no practical limit; the field is absent where not recorded, and absent is not the same as zero. The live note in the master is authoritative and may be newer than this build's fallback text.";
+const MASTER_NOTE = "LOCATION MODEL, CellarBook v1.9.1. wf1-wf4 = wine fridge shelves, top to bottom, EACH with a pos field 1-4 left to right. krack = kitchen fridge wine rack, pos 1-4 left to right. kdoor = kitchen fridge door. kdrawer = kitchen fridge vegetable drawer (replaces the retired 'kitchen' code). library = library shelf, room temperature. basement = basement cellar. unassigned = added but not yet placed. unconfirmed = open question, excluded from every count and never sent to the sommelier. WINDOW SCHEMA v3: window.from = first year good to drink, null means ready on release; window.to = last year, null means no meaningful limit unopened; window.unknown = true forces the Unclassified bucket regardless of years; window.decant = minutes advised, null means none; window.detail = prose for human eyes only, NEVER parsed; window.source = verified or estimate. The old window.status prose string is DELETED. Maturity computes buckets from the current year: unknown -> Unclassified; year < from -> Hold; from <= year <= to -> Ready, and Drink soon when to is set and one year or less away; year > to -> Past window. Nothing can fall out of every bucket. openDays = {min,max} days of useful life once opened and refrigerated; max null means no practical limit; the field is absent where not recorded, and absent is not the same as zero. The live note in the master is authoritative and may be newer than this build's fallback text.";
 const isStock = b => b.loc !== "unconfirmed";
 
 // Bottles in an ordered location carry pos (1 = leftmost). Everything else
@@ -1968,7 +1968,7 @@ function MaturityView({
     let d = rise > 0 ? "M " + xL + " " + yb + " C " + (xL + rise * 0.55) + " " + yb + ", " + (p1 - rise * 0.45) + " " + yt + ", " + p1 + " " + yt + " " : "M " + xL + " " + yt + " ";
     d += "L " + p2 + " " + yt + " ";
     d += fall > 0 ? "C " + (xR - fall * 0.45) + " " + yt + ", " + (xR - fall * 0.55) + " " + yb + ", " + xR + " " + yb : "L " + xR + " " + yt;
-    // v1.9.0 decline tail: run along the floor past the drink-by year to the
+    // v1.9.1 decline tail: run along the floor past the drink-by year to the
     // edge of the axis, so an over-window bottle shows today sitting in the
     // slump instead of a line that simply stops before the marker.
     if (fall > 0 && xR < W - PAD) d += " L " + (W - PAD) + " " + yb;
