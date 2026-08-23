@@ -320,7 +320,7 @@ var d=null!=c&&c.hydratedSources||null,e=!1,f="",g=aj;null!==c&&void 0!==c&&(!0=
 function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmountComponentAtNode=function(a){if(!Vd(a))throw Error(m(40));return a._reactRootContainer?(yb(function(){Wd(null,null,a,!1,function(){a._reactRootContainer=null;a[Ja]=null})}),!0):!1};Q.unstable_batchedUpdates=Tf;Q.unstable_renderSubtreeIntoContainer=function(a,b,c,d){if(!Vd(c))throw Error(m(200));if(null==a||void 0===a._reactInternals)throw Error(m(38));return Wd(a,b,c,!1,d)};Q.version="18.3.1-next-f1338f8080-20240426"});
 })();
 </script>
-<script>// Web build 1.9.2: public GitHub Pages copy. Privacy-stripped by design --
+<script>// Web build 1.9.8: public GitHub Pages copy. Privacy-stripped by design --
 // empty seed, anonymised taste profile, no personal file paths. The real
 // cellar arrives from Dropbox after connecting, on your device only.
 const {
@@ -338,7 +338,7 @@ const {
 // Provenance discipline: every window/pairing tagged verified|estimate.
 // ================================================================
 
-const APP_VERSION = "1.9.2 web";
+const APP_VERSION = "1.9.8 web";
 const TYPE_META = {
   red: {
     label: "Red",
@@ -366,7 +366,7 @@ const TYPE_META = {
 // The kitchen fridge is not one bucket: it has a wine rack with an ordered
 // left-to-right sequence, and a door. v1.5.4 and earlier collapsed both into
 // "kitchen", which is why the app could not show you what you actually have.
-// Location model, v1.9.2 (ruled 2026-08-21). Every wine-fridge shelf and the
+// Location model, v1.9.8 (ruled 2026-08-21). Every wine-fridge shelf and the
 // kitchen rack is an ORDERED run of 4 slots carrying pos 1-4, left to right.
 // Through v1.7.2 only krack was ordered and shelf order lived in free text --
 // the same fault as the Maturity tab, one field over. "kitchen" is retired:
@@ -445,7 +445,7 @@ const STOCK_GROUPS = ["Wine fridge", "Kitchen fridge", "Library", "Basement", "J
 // verbatim rack statement. v1.5.8 carries it through pull, cache, push and
 // backup. MASTER_NOTE below is the corrected text for the v1.5.8 location
 // vocabulary; it is never applied silently, only by the button in Sync.
-const MASTER_NOTE = "LOCATION MODEL, CellarBook v1.9.2. wf1-wf4 = wine fridge shelves, top to bottom, EACH with a pos field 1-4 left to right. krack = kitchen fridge wine rack, pos 1-4 left to right. kdoor = kitchen fridge door. kdrawer = kitchen fridge vegetable drawer (replaces the retired 'kitchen' code). library = library shelf, room temperature. basement = basement cellar. unassigned = added but not yet placed. unconfirmed = open question, excluded from every count and never sent to the sommelier. WINDOW SCHEMA v3: window.from = first year good to drink, null means ready on release; window.to = last year, null means no meaningful limit unopened; window.unknown = true forces the Unclassified bucket regardless of years; window.decant = minutes advised, null means none; window.detail = prose for human eyes only, NEVER parsed; window.source = verified or estimate. The old window.status prose string is DELETED. Maturity computes buckets from the current year: unknown -> Unclassified; year < from -> Hold; from <= year <= to -> Ready, and Drink soon when to is set and one year or less away; year > to -> Past window. Nothing can fall out of every bucket. openDays = {min,max} days of useful life once opened and refrigerated; max null means no practical limit; the field is absent where not recorded, and absent is not the same as zero. The live note in the master is authoritative and may be newer than this build's fallback text.";
+const MASTER_NOTE = "LOCATION MODEL, CellarBook v1.9.8. wf1-wf4 = wine fridge shelves, top to bottom, EACH with a pos field 1-4 left to right. krack = kitchen fridge wine rack, pos 1-4 left to right. kdoor = kitchen fridge door. kdrawer = kitchen fridge vegetable drawer (replaces the retired 'kitchen' code). library = library shelf, room temperature. basement = basement cellar. unassigned = added but not yet placed. unconfirmed = open question, excluded from every count and never sent to the sommelier. WINDOW SCHEMA v3: window.from = first year good to drink, null means ready on release; window.to = last year, null means no meaningful limit unopened; window.unknown = true forces the Unclassified bucket regardless of years; window.decant = minutes advised, null means none; window.detail = prose for human eyes only, NEVER parsed; window.source = verified or estimate. The old window.status prose string is DELETED. Maturity computes buckets from the current year: unknown -> Unclassified; year < from -> Hold; from <= year <= to -> Ready, and Drink soon when to is set and one year or less away; year > to -> Past window. Nothing can fall out of every bucket. openDays = {min,max} days of useful life once opened and refrigerated; max null means no practical limit; the field is absent where not recorded, and absent is not the same as zero. The live note in the master is authoritative and may be newer than this build's fallback text.";
 const isStock = b => b.loc !== "unconfirmed";
 
 // Bottles in an ordered location carry pos (1 = leftmost). Everything else
@@ -577,7 +577,7 @@ function tasteProfileText(tp) {
 // exactly how the app came to show a cellar you no longer have. The seed is
 // now a snapshot of the master, so an offline device is out of date rather
 // than wrong. Refresh it whenever the master moves materially.
-const SEED_AS_OF = "2026-08-21";
+const SEED_AS_OF = "2026-08-23";
 const SEED = []; // web build: starts empty by design — the cellar arrives from Dropbox after connecting.
 
 // Corrected 2026-08-08: Mirafiore Barolo removed — never owned; earlier
@@ -991,29 +991,68 @@ async function dbxPull(timeoutMs = PULL_DEADLINE_MS) {
   }
   return JSON.parse(await r.text()); // throws loudly — caller keeps local state
 }
-async function askClaude(messages) {
+
+// Anthropic's server-side web search. Sommelier only, never label reading:
+// PhotoAdd parses its answer as JSON and search commentary would corrupt it.
+const WEB_SEARCH_TOOL = [{
+  type: "web_search_20250305",
+  name: "web_search"
+}];
+
+// The sommelier call: search on, and room for the results to come back.
+const askSommelier = messages => askClaude(messages, {
+  tools: WEB_SEARCH_TOOL,
+  max_tokens: 4000
+});
+async function askClaude(messages, opts) {
   const key = getClaudeKey();
   if (!key) throw new Error("No Claude API key on this device. The sommelier and label reading live in the chat version, or add a key under Sync.");
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      messages
-    })
-  });
-  const data = await response.json();
-  if (data.error) throw new Error(data.error.message || "Claude API error");
-  return data.content.filter(i => i.type === "text").map(i => i.text).join("\n");
+  const o = opts || {};
+  const convo = messages.slice();
+  let out = "";
+  // web_search can stop with "pause_turn": the model paused mid-turn and wants
+  // the conversation handed straight back. Bounded so a loop cannot run up a
+  // bill; hitting the bound is an error, never a quietly truncated answer.
+  for (let hop = 0; hop < 4; hop++) {
+    const payload = {
+      model: "claude-opus-5",
+      max_tokens: o.max_tokens || 1000,
+      messages: convo
+    };
+    if (o.tools) payload.tools = o.tools;
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message || "Claude API error");
+    const text = (data.content || []).filter(i => i.type === "text").map(i => i.text).join("\n");
+    if (text) out = out ? out + "\n" + text : text;
+    if (data.stop_reason !== "pause_turn") return out;
+    convo.push({
+      role: "assistant",
+      content: data.content
+    });
+  }
+  throw new Error("The sommelier kept pausing to search and never finished. Try a narrower question.");
 }
 function parseJSON(text) {
-  const clean = text.replace(/```json|```/g, "").trim();
+  // Strip web_search citation markup, then collapse RAW newlines to spaces.
+  //
+  // v1.9.8 came back "Response (unstructured)": the JSON failed to parse. With
+  // tools on, the reply arrives as several text blocks around the search calls
+  // and askClaude joins them with a newline. When the JSON spans two blocks that
+  // newline lands INSIDE a JSON string, and a raw newline in a string is
+  // illegal JSON. Collapsing raw newlines is safe by construction: JSON ignores
+  // whitespace outside strings, and inside strings a real line break must be
+  // escaped as \n anyway, which this does not touch.
+  const clean = text.replace(/<\/?cite[^>]*>/g, "").replace(/```json|```/g, "").replace(/[\r\n]+/g, " ").trim();
   const start = clean.indexOf("{");
   const end = clean.lastIndexOf("}");
   return JSON.parse(clean.slice(start, end + 1));
@@ -1968,7 +2007,7 @@ function MaturityView({
     let d = rise > 0 ? "M " + xL + " " + yb + " C " + (xL + rise * 0.55) + " " + yb + ", " + (p1 - rise * 0.45) + " " + yt + ", " + p1 + " " + yt + " " : "M " + xL + " " + yt + " ";
     d += "L " + p2 + " " + yt + " ";
     d += fall > 0 ? "C " + (xR - fall * 0.45) + " " + yt + ", " + (xR - fall * 0.55) + " " + yb + ", " + xR + " " + yb : "L " + xR + " " + yt;
-    // v1.9.2 decline tail: run along the floor past the drink-by year to the
+    // v1.9.8 decline tail: run along the floor past the drink-by year to the
     // edge of the axis, so an over-window bottle shows today sitting in the
     // slump instead of a line that simply stops before the marker.
     if (fall > 0 && xR < W - PAD) d += " L " + (W - PAD) + " " + yb;
@@ -2768,17 +2807,11 @@ function Pairing({
     raw,
     qa
   } = state;
+  const where = state.where || "";
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [answerDraft, setAnswerDraft] = useState("");
   const [savedId, setSavedId] = useState(null);
-  if (!getClaudeKey()) return /*#__PURE__*/React.createElement("div", {
-    className: "cb-panel"
-  }, /*#__PURE__*/React.createElement("h2", null, "Tonight's pairing"), /*#__PURE__*/React.createElement("div", {
-    className: "cb-field"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "val"
-  }, "The sommelier needs the Claude brain, which this standalone copy does not have yet. Ask Claude in chat instead — it reads the same cellar file this app syncs, so it always knows what is in the house. To enable pairings here, add a Claude API key under Sync.")));
   const setDish = v => setState(s => ({
     ...s,
     dish: v
@@ -2795,6 +2828,13 @@ function Pairing({
     ...s,
     raw: v
   }));
+  if (!getClaudeKey()) return /*#__PURE__*/React.createElement("div", {
+    className: "cb-panel"
+  }, /*#__PURE__*/React.createElement("h2", null, "Tonight's pairing"), /*#__PURE__*/React.createElement("div", {
+    className: "cb-field"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "val"
+  }, "The sommelier needs the Claude brain, which this standalone copy does not have yet. Ask Claude in chat instead — it reads the same cellar file this app syncs, so it always knows what is in the house. To enable pairings here, add a Claude API key under Sync.")));
   const findBottle = pick => {
     if (!pick) return null;
     const p = pick.toLowerCase();
@@ -2895,15 +2935,59 @@ function Pairing({
       onClick: () => onLocate(b)
     }, "Show in cellar"));
   };
-  const run = async qaList => {
+  const run = async (qaList, m) => {
+    const MODE = m || state.mode || "cellar";
     setBusy(true);
     setErr("");
     setRes(null);
     setRaw("");
+
+    // ---- Anywhere: no inventory, live web, restaurant-first. Returns early.
+    if (MODE === "anywhere") {
+      const qaOut = qaList.length ? "\nCLARIFICATIONS - you asked, the owner answered:\n" + qaList.map(x => "Q: " + x.q + "\nA: " + x.a).join("\n") + "\n" : "";
+      try {
+        const text = await askSommelier([{
+          role: "user",
+          content: `You are the owner's personal sommelier, at his elbow in a restaurant or a wine shop. He is AWAY FROM HIS CELLAR. Recommend from the whole world of wine, not from any inventory.
+
+Address the owner as "you" in every field, never "he" or third person.
+
+${taste || TASTE_PROFILE}
+
+Use web search when the answer depends on anything current: what a region is actually making now, a producer's present reputation, a recent vintage, rough restaurant or retail price. Do not search for things you already know well, such as classic pairings or grape character.
+
+Assume a RESTAURANT WINE LIST unless the dish description says otherwise. That means: name something he can plausibly ask for, not a cult bottle. Give him a fallback style to fall back on when the list is thin, because it usually is. Say what to avoid on a list like this. Price in local currency, as a range, and mark it as an estimate.
+
+WHERE HE IS: ${where || "not given - answer generally and say the answer would sharpen with a place"}
+
+Use the place. If he has named a RESTAURANT, search for that restaurant's actual wine list.
+
+HARD RULE ON THAT LIST. You must state which of these two is true, in the "why" field, in plain words:
+  (i) you FOUND the list and are recommending from it, or
+  (ii) you did NOT find it and are recommending what a place like that in that town normally pours.
+Most restaurants do not publish a wine list, so (ii) is the common case and there is no shame in it. NEVER write anything that implies knowledge of what is on a specific restaurant's list unless you actually retrieved it. Do not name a bottle "their list includes" on the strength of it being regionally typical. Getting this wrong sends him to a table to ask for something that is not there. If he has named a CITY or REGION, recommend what is genuinely poured and available there, local first, and name the appellation. If he has named only a COUNTRY, stay broader but still concrete. Never recommend something that would be odd or unfindable in that place.
+
+DISH OR OCCASION: ${dish}
+DETAILS: ${prep || "not given - factor this uncertainty into confidence"}
+${qaOut}
+Respond ONLY with JSON, no preamble, no markdown fences:
+{"pick":"the wine or precise style to ask for","why":"2-3 sentences addressed to you, grounded in the taste profile - name the axis it satisfies","confidence":"NN% + one clause","falsifier":"the single thing that would flip this recommendation","runner_up":"the fallback style if the list does not have the pick, or empty","runner_up_why":"1 sentence","serving":"temperature, decant, and a price range marked as an estimate","ask":${qaList.length >= 3 ? '"" (you have asked enough - no more questions)' : '"ONE short question, only if the answer could genuinely change the pick; otherwise empty"'}}`
+        }]);
+        try {
+          setRes(parseJSON(text));
+        } catch {
+          setRaw(text);
+        }
+      } catch (e) {
+        setErr("Sommelier failed: " + (e && e.message ? e.message : "unknown error") + " (check signal, key, and your spend cap)");
+      }
+      setBusy(false);
+      return;
+    }
     const inv = bottles.map(b => `- ${b.name} ${b.vintage} (${b.type}${b.grapes ? ", " + b.grapes : ""}${b.region ? ", " + b.region : ""}) — window: ${windowRange(b.window)} (${windowBucket(b.window)}) [${normWindow(b.window).source}]${normWindow(b.window).decant !== null ? ", decant " + normWindow(b.window).decant + " min" : ""}${b.pairing ? " — pairing notes: " + b.pairing : ""} — location: ${(LOCATIONS.find(l => l.id === b.loc) || {}).label || b.loc}${b.pos ? " position " + b.pos : ""}, qty ${b.qty}`).join("\n");
     const qaBlock = qaList.length ? "\nCLARIFICATIONS — you asked, the owner answered:\n" + qaList.map(x => "Q: " + x.q + "\nA: " + x.a).join("\n") + "\n" : "";
     try {
-      const text = await askClaude([{
+      const text = await askSommelier([{
         role: "user",
         content: `You are the owner's personal sommelier, speaking to him directly at his table. Recommend ONLY from bottles physically in the house, listed below. Respect hold windows: never recommend a bottle marked HOLD unless nothing else fits, and say so if you do.
 
@@ -2925,19 +3009,20 @@ Respond ONLY with JSON, no preamble, no markdown fences:
       } catch {
         setRaw(text);
       }
-    } catch {
-      setErr("The pairing call failed. Try again.");
+    } catch (e) {
+      setErr("Pairing failed: " + (e && e.message ? e.message : "unknown error") + " (check signal, key, and your spend cap)");
     }
     setBusy(false);
   };
-  const startFresh = () => {
+  const startFresh = m => {
     setState(s => ({
       ...s,
-      qa: []
+      qa: [],
+      mode: m || "cellar"
     }));
     setAnswerDraft("");
     setSavedId(null);
-    run([]);
+    run([], m || "cellar");
   };
   const answerAndRefine = () => {
     if (!answerDraft.trim() || !res?.ask) return;
@@ -2951,7 +3036,7 @@ Respond ONLY with JSON, no preamble, no markdown fences:
     }));
     setAnswerDraft("");
     setSavedId(null);
-    run(next);
+    run(next, state.mode || "cellar");
   };
   const clearAll = () => {
     setState({
@@ -2959,7 +3044,9 @@ Respond ONLY with JSON, no preamble, no markdown fences:
       prep: "",
       res: null,
       raw: "",
-      qa: []
+      qa: [],
+      where: "",
+      mode: "cellar"
     });
     setAnswerDraft("");
     setErr("");
@@ -2996,6 +3083,18 @@ Respond ONLY with JSON, no preamble, no markdown fences:
     className: "cb-field"
   }, /*#__PURE__*/React.createElement("div", {
     className: "lbl"
+  }, "Where are you? (used only by Recommend anywhere)"), /*#__PURE__*/React.createElement("input", {
+    className: "cb-input",
+    placeholder: "Alicante · Rias Baixas · Spain · or name the restaurant",
+    value: where,
+    onChange: e => setState(s => ({
+      ...s,
+      where: e.target.value
+    }))
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "cb-field"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lbl"
   }, "Preparation details (they change the answer)"), /*#__PURE__*/React.createElement("textarea", {
     className: "cb-area",
     placeholder: "Brine? Char? Sauce sweetness? Butter-rested? Target temp?",
@@ -3003,9 +3102,16 @@ Respond ONLY with JSON, no preamble, no markdown fences:
     onChange: e => setPrep(e.target.value)
   })), /*#__PURE__*/React.createElement("button", {
     className: "cb-btn",
-    onClick: startFresh,
+    onClick: () => startFresh("cellar"),
     disabled: busy || !dish.trim()
-  }, busy ? "Thinking…" : "Recommend from my shelves"), err && /*#__PURE__*/React.createElement("div", {
+  }, busy ? "Thinking…" : "Recommend from my shelves"), /*#__PURE__*/React.createElement("button", {
+    className: "cb-btn",
+    onClick: () => startFresh("anywhere"),
+    disabled: busy || !dish.trim(),
+    style: {
+      marginLeft: 8
+    }
+  }, busy ? "Searching" : "Recommend anywhere"), err && /*#__PURE__*/React.createElement("div", {
     className: "cb-field"
   }, /*#__PURE__*/React.createElement("div", {
     className: "val",
@@ -3016,7 +3122,7 @@ Respond ONLY with JSON, no preamble, no markdown fences:
     className: "cb-result"
   }, /*#__PURE__*/React.createElement("div", {
     className: "pick"
-  }, res.pick), /*#__PURE__*/React.createElement(Locate, {
+  }, res.pick), (state.mode || "cellar") === "cellar" && /*#__PURE__*/React.createElement(Locate, {
     label: "Your pick",
     pickStr: res.pick
   }), /*#__PURE__*/React.createElement("div", {
@@ -3043,7 +3149,7 @@ Respond ONLY with JSON, no preamble, no markdown fences:
     className: "lbl"
   }, "Runner-up"), /*#__PURE__*/React.createElement("div", {
     className: "val"
-  }, res.runner_up, " — ", res.runner_up_why), /*#__PURE__*/React.createElement(Locate, {
+  }, res.runner_up, " — ", res.runner_up_why), (state.mode || "cellar") === "cellar" && /*#__PURE__*/React.createElement(Locate, {
     label: "Runner-up",
     pickStr: res.runner_up
   })), qa.length > 0 && /*#__PURE__*/React.createElement("div", {
@@ -3126,7 +3232,7 @@ Respond ONLY with JSON, no preamble, no markdown fences:
     style: {
       padding: "14px 0 0"
     }
-  }, "Recommends only from bottles in the house, using your logged taste profile and verified pairing learnings. Confidence and falsifier included by design."));
+  }, "From my shelves: recommends only from bottles in the house. Recommend anywhere: ignores the cellar entirely, searches the live web and answers for a restaurant list or a shop - use this when travelling. Both use your logged taste profile and verified pairing learnings, and both include confidence and a falsifier by design."));
 }
 
 // ---------- Sync ----------
