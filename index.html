@@ -1906,6 +1906,7 @@ function CellarBook() {
     bottles: bottles,
     consumed: consumed,
     pairings: pairings,
+    tasteProfile: tasteProfile,
     sync: sync,
     storageMode: storageMode,
     syncMode: syncMode,
@@ -2298,14 +2299,14 @@ function PhotoAdd({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [draft, setDraft] = useState(null);
+  if (!getClaudeKey()) return /*#__PURE__*/React.createElement("div", {
+    className: "cb-panel"
+  }, /*#__PURE__*/React.createElement("h2", null, "Add by photo"), /*#__PURE__*/React.createElement("div", {
+    className: "cb-field"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "val"
+  }, "Reading labels needs the Claude brain, which this standalone copy does not have yet. Two ways that work today: add the bottle under Add manually, or send the label photo to Claude in chat — it writes to the same cellar this app reads. To enable label reading here, add a Claude API key under Sync.")));
   const onFile = e => {
-    if (!getClaudeKey()) return /*#__PURE__*/React.createElement("div", {
-      className: "cb-panel"
-    }, /*#__PURE__*/React.createElement("h2", null, "Add by photo"), /*#__PURE__*/React.createElement("div", {
-      className: "cb-field"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "val"
-    }, "Reading labels needs the Claude brain, which this standalone copy does not have yet. Two ways that work today: add the bottle under Add manually, or send the label photo to Claude in chat — it writes to the same cellar this app reads. To enable label reading here, add a Claude API key under Sync.")));
     const file = e.target.files?.[0];
     if (!file) return;
     setErr("");
@@ -2872,14 +2873,14 @@ function Pairing({
   }, [busy]);
 
   // What it is plausibly doing, so the wait reads as progress rather than a hang.
+  if (!getClaudeKey()) return /*#__PURE__*/React.createElement("div", {
+    className: "cb-panel"
+  }, /*#__PURE__*/React.createElement("h2", null, "Tonight's pairing"), /*#__PURE__*/React.createElement("div", {
+    className: "cb-field"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "val"
+  }, "The sommelier needs the Claude brain, which this standalone copy does not have yet. Ask Claude in chat instead — it reads the same cellar file this app syncs, so it always knows what is in the house. To enable pairings here, add a Claude API key under Sync.")));
   const thinkingLine = () => {
-    if (!getClaudeKey()) return /*#__PURE__*/React.createElement("div", {
-      className: "cb-panel"
-    }, /*#__PURE__*/React.createElement("h2", null, "Tonight's pairing"), /*#__PURE__*/React.createElement("div", {
-      className: "cb-field"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "val"
-    }, "The sommelier needs the Claude brain, which this standalone copy does not have yet. Ask Claude in chat instead — it reads the same cellar file this app syncs, so it always knows what is in the house. To enable pairings here, add a Claude API key under Sync.")));
     const m = state.mode || "cellar";
     if (m !== "anywhere") return secs < 4 ? "Reading your cellar" : "Weighing the bottles against the dish";
     if (listImgs.length) return secs < 5 ? "Reading " + listImgs.length + " page" + (listImgs.length > 1 ? "s" : "") + " of the list" : secs < 14 ? "Matching what is printed against your taste profile" : "Checking your pairing log and the prices";
@@ -3422,6 +3423,7 @@ function SyncPanel({
   bottles,
   consumed,
   pairings,
+  tasteProfile,
   sync,
   storageMode,
   syncMode,
