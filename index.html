@@ -320,7 +320,7 @@ var d=null!=c&&c.hydratedSources||null,e=!1,f="",g=aj;null!==c&&void 0!==c&&(!0=
 function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmountComponentAtNode=function(a){if(!Vd(a))throw Error(m(40));return a._reactRootContainer?(yb(function(){Wd(null,null,a,!1,function(){a._reactRootContainer=null;a[Ja]=null})}),!0):!1};Q.unstable_batchedUpdates=Tf;Q.unstable_renderSubtreeIntoContainer=function(a,b,c,d){if(!Vd(c))throw Error(m(200));if(null==a||void 0===a._reactInternals)throw Error(m(38));return Wd(a,b,c,!1,d)};Q.version="18.3.1-next-f1338f8080-20240426"});
 })();
 </script>
-<script>// Web build 1.9.8: public GitHub Pages copy. Privacy-stripped by design --
+<script>// Web build 2.0.0: public GitHub Pages copy. Privacy-stripped by design --
 // empty seed, anonymised taste profile, no personal file paths. The real
 // cellar arrives from Dropbox after connecting, on your device only.
 const {
@@ -338,7 +338,7 @@ const {
 // Provenance discipline: every window/pairing tagged verified|estimate.
 // ================================================================
 
-const APP_VERSION = "1.9.8 web";
+const APP_VERSION = "2.0.0 web";
 const TYPE_META = {
   red: {
     label: "Red",
@@ -366,7 +366,7 @@ const TYPE_META = {
 // The kitchen fridge is not one bucket: it has a wine rack with an ordered
 // left-to-right sequence, and a door. v1.5.4 and earlier collapsed both into
 // "kitchen", which is why the app could not show you what you actually have.
-// Location model, v1.9.8 (ruled 2026-08-21). Every wine-fridge shelf and the
+// Location model, v2.0.0 (ruled 2026-08-21). Every wine-fridge shelf and the
 // kitchen rack is an ORDERED run of 4 slots carrying pos 1-4, left to right.
 // Through v1.7.2 only krack was ordered and shelf order lived in free text --
 // the same fault as the Maturity tab, one field over. "kitchen" is retired:
@@ -445,7 +445,7 @@ const STOCK_GROUPS = ["Wine fridge", "Kitchen fridge", "Library", "Basement", "J
 // verbatim rack statement. v1.5.8 carries it through pull, cache, push and
 // backup. MASTER_NOTE below is the corrected text for the v1.5.8 location
 // vocabulary; it is never applied silently, only by the button in Sync.
-const MASTER_NOTE = "LOCATION MODEL, CellarBook v1.9.8. wf1-wf4 = wine fridge shelves, top to bottom, EACH with a pos field 1-4 left to right. krack = kitchen fridge wine rack, pos 1-4 left to right. kdoor = kitchen fridge door. kdrawer = kitchen fridge vegetable drawer (replaces the retired 'kitchen' code). library = library shelf, room temperature. basement = basement cellar. unassigned = added but not yet placed. unconfirmed = open question, excluded from every count and never sent to the sommelier. WINDOW SCHEMA v3: window.from = first year good to drink, null means ready on release; window.to = last year, null means no meaningful limit unopened; window.unknown = true forces the Unclassified bucket regardless of years; window.decant = minutes advised, null means none; window.detail = prose for human eyes only, NEVER parsed; window.source = verified or estimate. The old window.status prose string is DELETED. Maturity computes buckets from the current year: unknown -> Unclassified; year < from -> Hold; from <= year <= to -> Ready, and Drink soon when to is set and one year or less away; year > to -> Past window. Nothing can fall out of every bucket. openDays = {min,max} days of useful life once opened and refrigerated; max null means no practical limit; the field is absent where not recorded, and absent is not the same as zero. The live note in the master is authoritative and may be newer than this build's fallback text.";
+const MASTER_NOTE = "LOCATION MODEL, CellarBook v2.0.0. wf1-wf4 = wine fridge shelves, top to bottom, EACH with a pos field 1-4 left to right. krack = kitchen fridge wine rack, pos 1-4 left to right. kdoor = kitchen fridge door. kdrawer = kitchen fridge vegetable drawer (replaces the retired 'kitchen' code). library = library shelf, room temperature. basement = basement cellar. unassigned = added but not yet placed. unconfirmed = open question, excluded from every count and never sent to the sommelier. WINDOW SCHEMA v3: window.from = first year good to drink, null means ready on release; window.to = last year, null means no meaningful limit unopened; window.unknown = true forces the Unclassified bucket regardless of years; window.decant = minutes advised, null means none; window.detail = prose for human eyes only, NEVER parsed; window.source = verified or estimate. The old window.status prose string is DELETED. Maturity computes buckets from the current year: unknown -> Unclassified; year < from -> Hold; from <= year <= to -> Ready, and Drink soon when to is set and one year or less away; year > to -> Past window. Nothing can fall out of every bucket. openDays = {min,max} days of useful life once opened and refrigerated; max null means no practical limit; the field is absent where not recorded, and absent is not the same as zero. The live note in the master is authoritative and may be newer than this build's fallback text.";
 const isStock = b => b.loc !== "unconfirmed";
 
 // Bottles in an ordered location carry pos (1 = leftmost). Everything else
@@ -1045,7 +1045,7 @@ async function askClaude(messages, opts) {
 function parseJSON(text) {
   // Strip web_search citation markup, then collapse RAW newlines to spaces.
   //
-  // v1.9.8 came back "Response (unstructured)": the JSON failed to parse. With
+  // v2.0.0 came back "Response (unstructured)": the JSON failed to parse. With
   // tools on, the reply arrives as several text blocks around the search calls
   // and askClaude joins them with a newline. When the JSON spans two blocks that
   // newline lands INSIDE a JSON string, and a raw newline in a string is
@@ -1084,6 +1084,41 @@ function downscaleDataUrl(dataUrl, maxW = 360, quality = 0.72) {
     };
     img.onerror = () => rej(new Error("decode failed"));
     img.src = dataUrl;
+  });
+}
+
+// Shrink for the API. Caps the LONG edge, unlike downscaleDataUrl which caps
+// width and is for local thumbnails. 1568 is Anthropic's own threshold: at or
+// under it in both dimensions, no server-side resize happens, so this saves
+// latency as well as staying far inside the 5 MB base64 ceiling.
+// Measured 2026-08-23: a photo-like 4032x3024 wine list is 4.78 MB base64 raw
+// (91% of the limit) and 246 KB after this (4.8%).
+const API_MAX_EDGE = 1568;
+const MAX_LIST_PAGES = 8;
+const API_JPEG_QUALITY = 0.85;
+function shrinkForApi(dataUrl, maxEdge = API_MAX_EDGE, quality = API_JPEG_QUALITY) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => {
+      const long = Math.max(im.width, im.height);
+      const s = Math.min(1, maxEdge / long);
+      const w = Math.max(1, Math.round(im.width * s));
+      const h = Math.max(1, Math.round(im.height * s));
+      const cv = document.createElement("canvas");
+      cv.width = w;
+      cv.height = h;
+      cv.getContext("2d").drawImage(im, 0, 0, w, h);
+      const out = cv.toDataURL("image/jpeg", quality);
+      res({
+        data: out.split(",")[1],
+        mediaType: "image/jpeg",
+        preview: out,
+        w: w,
+        h: h
+      });
+    };
+    im.onerror = () => rej(new Error("Could not read that image. Try again, or a different photo."));
+    im.src = dataUrl;
   });
 }
 function CellarBook() {
@@ -1639,6 +1674,12 @@ function CellarBook() {
         .cb-btn { background: #A63D4E; border: none; color: #fff; padding: 10px 18px; border-radius: 8px; font: inherit; font-weight: 500; cursor: pointer; }
         .cb-btn:hover { background: #B84B5D; }
         .cb-btn:disabled { opacity: .5; cursor: default; }
+        @keyframes cbPulse { 0%, 100% { opacity: .25; transform: scale(.75); } 50% { opacity: 1; transform: scale(1); } }
+        .cb-thinking { display: flex; align-items: center; gap: 10px; padding: 12px 0 2px; color: #C9A87C; font-size: 14px; }
+        .cb-thinking .dot { width: 9px; height: 9px; border-radius: 50%; background: #C9A87C; animation: cbPulse 1.1s ease-in-out infinite; }
+        .cb-thinking .dot:nth-child(2) { animation-delay: .18s; }
+        .cb-thinking .dot:nth-child(3) { animation-delay: .36s; }
+        .cb-thinking .secs { color: #E8D9BC; font-weight: 600; font-variant-numeric: tabular-nums; margin-left: 2px; }
         .cb-btn.ghost { background: transparent; border: 1px solid #3A2A31; color: #C9B4BC; }
         .cb-panel { padding: 18px 24px; max-width: 640px; }
         .cb-panel h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 27px; font-weight: 600; margin: 0 0 6px; }
@@ -1807,6 +1848,7 @@ function CellarBook() {
     bottles: stock,
     imgs: imgs,
     taste: tasteProfileText(tasteProfile),
+    pairings: pairings,
     state: pairState,
     setState: setPairState,
     onSave: savePairing,
@@ -2007,7 +2049,7 @@ function MaturityView({
     let d = rise > 0 ? "M " + xL + " " + yb + " C " + (xL + rise * 0.55) + " " + yb + ", " + (p1 - rise * 0.45) + " " + yt + ", " + p1 + " " + yt + " " : "M " + xL + " " + yt + " ";
     d += "L " + p2 + " " + yt + " ";
     d += fall > 0 ? "C " + (xR - fall * 0.45) + " " + yt + ", " + (xR - fall * 0.55) + " " + yb + ", " + xR + " " + yb : "L " + xR + " " + yt;
-    // v1.9.8 decline tail: run along the floor past the drink-by year to the
+    // v2.0.0 decline tail: run along the floor past the drink-by year to the
     // edge of the axis, so an over-window bottle shows today sitting in the
     // slump instead of a line that simply stops before the marker.
     if (fall > 0 && xR < W - PAD) d += " L " + (W - PAD) + " " + yb;
@@ -2256,26 +2298,23 @@ function PhotoAdd({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [draft, setDraft] = useState(null);
-  if (!getClaudeKey()) return /*#__PURE__*/React.createElement("div", {
-    className: "cb-panel"
-  }, /*#__PURE__*/React.createElement("h2", null, "Add by photo"), /*#__PURE__*/React.createElement("div", {
-    className: "cb-field"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "val"
-  }, "Reading labels needs the Claude brain, which this standalone copy does not have yet. Two ways that work today: add the bottle under Add manually, or send the label photo to Claude in chat — it writes to the same cellar this app reads. To enable label reading here, add a Claude API key under Sync.")));
   const onFile = e => {
+    if (!getClaudeKey()) return /*#__PURE__*/React.createElement("div", {
+      className: "cb-panel"
+    }, /*#__PURE__*/React.createElement("h2", null, "Add by photo"), /*#__PURE__*/React.createElement("div", {
+      className: "cb-field"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "val"
+    }, "Reading labels needs the Claude brain, which this standalone copy does not have yet. Two ways that work today: add the bottle under Add manually, or send the label photo to Claude in chat — it writes to the same cellar this app reads. To enable label reading here, add a Claude API key under Sync.")));
     const file = e.target.files?.[0];
     if (!file) return;
     setErr("");
     setDraft(null);
     const reader = new FileReader();
     reader.onload = () => {
-      const b64 = reader.result.split(",")[1];
-      setImg({
-        data: b64,
-        mediaType: file.type || "image/jpeg",
-        preview: reader.result
-      });
+      // Downscale before the API ever sees it. Also normalises HEIC and other
+      // phone formats to JPEG via the canvas, which the API always accepts.
+      shrinkForApi(reader.result).then(setImg).catch(() => setErr("Could not read that photo. Try another."));
     };
     reader.onerror = () => setErr("Could not read the file.");
     reader.readAsDataURL(file);
@@ -2342,13 +2381,17 @@ Only state what is literally on the label or safely inferable from producer/appe
   return /*#__PURE__*/React.createElement("div", {
     className: "cb-panel"
   }, /*#__PURE__*/React.createElement("h2", null, "Add by photo"), /*#__PURE__*/React.createElement("div", {
+    className: "cb-note",
+    style: {
+      padding: "0 0 12px"
+    }
+  }, "This reads ONE BOTTLE LABEL and adds it to your cellar. Photographing a RESTAURANT WINE LIST to be told what to order? That lives under ", /*#__PURE__*/React.createElement("b", null, "Tonight's pairing"), " → Wine list photos → ", /*#__PURE__*/React.createElement("b", null, "Recommend anywhere"), ", and it takes several pages."), /*#__PURE__*/React.createElement("div", {
     className: "cb-field"
   }, /*#__PURE__*/React.createElement("div", {
     className: "lbl"
   }, "Label photo"), /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
-    capture: "environment",
     onChange: onFile
   })), img && /*#__PURE__*/React.createElement("img", {
     className: "cb-photo-preview",
@@ -2798,7 +2841,8 @@ function Pairing({
   onSave,
   state,
   setState,
-  taste
+  taste,
+  pairings
 }) {
   const {
     dish,
@@ -2808,10 +2852,73 @@ function Pairing({
     qa
   } = state;
   const where = state.where || "";
+  const serve = state.serve || "any"; // "any" | "glass" | "bottle"
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [answerDraft, setAnswerDraft] = useState("");
+  const [listImgs, setListImgs] = useState([]);
+  const [secs, setSecs] = useState(0);
   const [savedId, setSavedId] = useState(null);
+  // Elapsed seconds while thinking. A number that keeps moving is the proof
+  // that the call is alive; a static label is not.
+  useEffect(() => {
+    if (!busy) {
+      setSecs(0);
+      return;
+    }
+    const t0 = Date.now();
+    const iv = setInterval(() => setSecs(Math.round((Date.now() - t0) / 1000)), 1000);
+    return () => clearInterval(iv);
+  }, [busy]);
+
+  // What it is plausibly doing, so the wait reads as progress rather than a hang.
+  const thinkingLine = () => {
+    if (!getClaudeKey()) return /*#__PURE__*/React.createElement("div", {
+      className: "cb-panel"
+    }, /*#__PURE__*/React.createElement("h2", null, "Tonight's pairing"), /*#__PURE__*/React.createElement("div", {
+      className: "cb-field"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "val"
+    }, "The sommelier needs the Claude brain, which this standalone copy does not have yet. Ask Claude in chat instead — it reads the same cellar file this app syncs, so it always knows what is in the house. To enable pairings here, add a Claude API key under Sync.")));
+    const m = state.mode || "cellar";
+    if (m !== "anywhere") return secs < 4 ? "Reading your cellar" : "Weighing the bottles against the dish";
+    if (listImgs.length) return secs < 5 ? "Reading " + listImgs.length + " page" + (listImgs.length > 1 ? "s" : "") + " of the list" : secs < 14 ? "Matching what is printed against your taste profile" : "Checking your pairing log and the prices";
+    return secs < 5 ? "Thinking" : secs < 14 ? "Searching the web" : "Weighing what it found against your taste profile";
+  };
+
+  // Photographs of the wine list. Real lists run to several pages, so this takes
+  // MANY and appends, letting him shoot or pick them one at a time or all at once.
+  // Kept in component state, never in `state`, so no base64 ever reaches the
+  // master and bloats the sync file.
+  //
+  // MAX_LIST_PAGES is a cost and payload guard, not an API limit: the API takes
+  // up to 100 images and 32 MB a request, and each page is ~250 KB base64 after
+  // shrinkForApi, so eight pages is ~2 MB. Eight is far more than any restaurant
+  // list needs and stops an accidental select-all from sending a holiday album.
+  const onListPhoto = e => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setErr("");
+    const room = MAX_LIST_PAGES - listImgs.length;
+    if (room <= 0) {
+      setErr("That is already " + MAX_LIST_PAGES + " pages. Remove one first.");
+      return;
+    }
+    if (files.length > room) setErr("Only the first " + room + " added; " + MAX_LIST_PAGES + " pages is the limit.");
+    Promise.all(files.slice(0, room).map(f => new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => shrinkForApi(fr.result).then(res).catch(rej);
+      fr.onerror = () => rej(new Error("read failed"));
+      fr.readAsDataURL(f);
+    }))).then(shrunk => setListImgs(prev => prev.concat(shrunk))).catch(() => setErr("Could not read one of those photos. Try again, or a different shot."));
+    e.target.value = "";
+  };
+
+  // The field-verified pairing log, as plain lines for the prompt. This is the
+  // one thing the sommelier had no access to: what he has ALREADY drunk with
+  // what, and whether it worked. A recorded hit on the exact dish outranks any
+  // amount of stylistic reasoning.
+  const pairingLog = (pairings || []).length ? (pairings || []).map(p => "- " + (p.dish || "?") + " -> " + (p.pick || "?") + (p.confidence ? " [" + p.confidence + "]" : "") + (p.outcome ? " [outcome: " + p.outcome + "]" : "") + (p.date ? " (" + p.date + ")" : "") + (p.why ? " :: " + p.why : "")).join("\n") : "none recorded yet";
   const setDish = v => setState(s => ({
     ...s,
     dish: v
@@ -2828,13 +2935,6 @@ function Pairing({
     ...s,
     raw: v
   }));
-  if (!getClaudeKey()) return /*#__PURE__*/React.createElement("div", {
-    className: "cb-panel"
-  }, /*#__PURE__*/React.createElement("h2", null, "Tonight's pairing"), /*#__PURE__*/React.createElement("div", {
-    className: "cb-field"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "val"
-  }, "The sommelier needs the Claude brain, which this standalone copy does not have yet. Ask Claude in chat instead — it reads the same cellar file this app syncs, so it always knows what is in the house. To enable pairings here, add a Claude API key under Sync.")));
   const findBottle = pick => {
     if (!pick) return null;
     const p = pick.toLowerCase();
@@ -2945,20 +3045,27 @@ function Pairing({
     // ---- Anywhere: no inventory, live web, restaurant-first. Returns early.
     if (MODE === "anywhere") {
       const qaOut = qaList.length ? "\nCLARIFICATIONS - you asked, the owner answered:\n" + qaList.map(x => "Q: " + x.q + "\nA: " + x.a).join("\n") + "\n" : "";
-      try {
-        const text = await askSommelier([{
-          role: "user",
-          content: `You are the owner's personal sommelier, at his elbow in a restaurant or a wine shop. He is AWAY FROM HIS CELLAR. Recommend from the whole world of wine, not from any inventory.
+      const listBlock = listImgs.length ? `\n${listImgs.length} PHOTOGRAPH${listImgs.length > 1 ? "S" : ""} OF THE ACTUAL WINE LIST ${listImgs.length > 1 ? "ARE" : "IS"} ATTACHED${listImgs.length > 1 ? ", and they are consecutive PAGES OF ONE LIST - read them all before answering, and treat them as a single list rather than several" : ""}. This changes everything: recommend ONLY from what is printed on ${listImgs.length > 1 ? "those pages" : "it"}. Quote the entry as it appears, with its price if the price is legible. If a photo is unreadable, blurred, or clearly only part of the list, say so plainly and fall back to the general advice - do not guess at entries you cannot read, and do not assume a page you were not given. Do not search the web for their list when you have the list in front of you.\n` : "";
+      const promptText = `You are the owner's personal sommelier, at his elbow in a restaurant or a wine shop. He is AWAY FROM HIS CELLAR. Recommend from the whole world of wine, not from any inventory.
+${listBlock}
 
 Address the owner as "you" in every field, never "he" or third person.
 
 ${taste || TASTE_PROFILE}
+
+HIS OWN PAIRING LOG - wines he has actually drunk, and how they went. Treat a
+field-verified hit on the SAME dish, or at the SAME restaurant, as stronger
+evidence than any stylistic reasoning of yours, and say so when you use one.
+If a logged wine is on the list in front of you and fits, it should usually win.
+${pairingLog}
 
 Use web search when the answer depends on anything current: what a region is actually making now, a producer's present reputation, a recent vintage, rough restaurant or retail price. Do not search for things you already know well, such as classic pairings or grape character.
 
 Assume a RESTAURANT WINE LIST unless the dish description says otherwise. That means: name something he can plausibly ask for, not a cult bottle. Give him a fallback style to fall back on when the list is thin, because it usually is. Say what to avoid on a list like this. Price in local currency, as a range, and mark it as an estimate.
 
 WHERE HE IS: ${where || "not given - answer generally and say the answer would sharpen with a place"}
+
+HOW HE IS DRINKING: ${serve === "glass" ? "BY THE GLASS. Recommend ONLY something available by the glass. If you have the list, pick from the entries that print a by-the-glass price and quote that price, not the bottle price. If the best wine on the list is bottle-only, say so in one clause and recommend the best GLASS anyway - he asked for a glass." : serve === "bottle" ? "BY THE BOTTLE. Recommend a full bottle and quote the bottle price. Ignore glass-only pours." : "No preference stated. Pick the best wine for the dish, and say which format you mean and what it costs."}
 
 Use the place. If he has named a RESTAURANT, search for that restaurant's actual wine list.
 
@@ -2971,7 +3078,25 @@ DISH OR OCCASION: ${dish}
 DETAILS: ${prep || "not given - factor this uncertainty into confidence"}
 ${qaOut}
 Respond ONLY with JSON, no preamble, no markdown fences:
-{"pick":"the wine or precise style to ask for","why":"2-3 sentences addressed to you, grounded in the taste profile - name the axis it satisfies","confidence":"NN% + one clause","falsifier":"the single thing that would flip this recommendation","runner_up":"the fallback style if the list does not have the pick, or empty","runner_up_why":"1 sentence","serving":"temperature, decant, and a price range marked as an estimate","ask":${qaList.length >= 3 ? '"" (you have asked enough - no more questions)' : '"ONE short question, only if the answer could genuinely change the pick; otherwise empty"'}}`
+{"pick":"the wine or precise style to ask for","why":"2-3 sentences addressed to you, grounded in the taste profile - name the axis it satisfies","confidence":"NN% + one clause","falsifier":"the single thing that would flip this recommendation","runner_up":"the fallback style if the list does not have the pick, or empty","runner_up_why":"1 sentence","serving":"temperature, decant, and a price range marked as an estimate","ask":${qaList.length >= 3 ? '"" (you have asked enough - no more questions)' : '"ONE short question, only if the answer could genuinely change the pick; otherwise empty"'}}`;
+      // Multimodal when a list photo is attached. The image goes FIRST: Anthropic
+      // recommend placing images before text, and the model reads the list before
+      // it reads the instructions about the list.
+      const content = listImgs.length ? listImgs.map(p => ({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: p.mediaType,
+          data: p.data
+        }
+      })).concat([{
+        type: "text",
+        text: promptText
+      }]) : promptText;
+      try {
+        const text = await askSommelier([{
+          role: "user",
+          content: content
         }]);
         try {
           setRes(parseJSON(text));
@@ -3046,7 +3171,8 @@ Respond ONLY with JSON, no preamble, no markdown fences:
       raw: "",
       qa: [],
       where: "",
-      mode: "cellar"
+      mode: "cellar",
+      serve: "any"
     });
     setAnswerDraft("");
     setErr("");
@@ -3083,6 +3209,23 @@ Respond ONLY with JSON, no preamble, no markdown fences:
     className: "cb-field"
   }, /*#__PURE__*/React.createElement("div", {
     className: "lbl"
+  }, "Glass or bottle?"), /*#__PURE__*/React.createElement("select", {
+    className: "cb-input",
+    value: serve,
+    onChange: e => setState(s => ({
+      ...s,
+      serve: e.target.value
+    }))
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "any"
+  }, "No preference — pick the best wine"), /*#__PURE__*/React.createElement("option", {
+    value: "glass"
+  }, "By the glass"), /*#__PURE__*/React.createElement("option", {
+    value: "bottle"
+  }, "By the bottle"))), /*#__PURE__*/React.createElement("div", {
+    className: "cb-field"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lbl"
   }, "Where are you? (used only by Recommend anywhere)"), /*#__PURE__*/React.createElement("input", {
     className: "cb-input",
     placeholder: "Alicante · Rias Baixas · Spain · or name the restaurant",
@@ -3104,14 +3247,53 @@ Respond ONLY with JSON, no preamble, no markdown fences:
     className: "cb-btn",
     onClick: () => startFresh("cellar"),
     disabled: busy || !dish.trim()
-  }, busy ? "Thinking…" : "Recommend from my shelves"), /*#__PURE__*/React.createElement("button", {
+  }, busy ? "Thinking…" : "Recommend from my shelves"), busy && /*#__PURE__*/React.createElement("div", {
+    className: "cb-thinking"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "dot"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "dot"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "dot"
+  }), /*#__PURE__*/React.createElement("span", null, thinkingLine()), /*#__PURE__*/React.createElement("span", {
+    className: "secs"
+  }, secs, "s")), /*#__PURE__*/React.createElement("button", {
     className: "cb-btn",
     onClick: () => startFresh("anywhere"),
     disabled: busy || !dish.trim(),
     style: {
       marginLeft: 8
     }
-  }, busy ? "Searching" : "Recommend anywhere"), err && /*#__PURE__*/React.createElement("div", {
+  }, busy ? "Searching" : listImgs.length ? "Read " + (listImgs.length > 1 ? listImgs.length + " pages" : "the list") + " and recommend" : "Recommend anywhere"), /*#__PURE__*/React.createElement("div", {
+    className: "cb-field",
+    style: {
+      paddingTop: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lbl"
+  }, "Wine list photos (optional, used by Recommend anywhere — add pages one at a time or all at once)"), /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: "image/*",
+    multiple: true,
+    onChange: onListPhoto
+  }), listImgs.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "val",
+    style: {
+      paddingTop: 6
+    }
+  }, listImgs.length, " page", listImgs.length > 1 ? "s" : "", " attached (", listImgs.map(p => p.w + "×" + p.h).join(", "), ").", listImgs.length > 1 ? " They will be read as one list, in the order added." : " It will recommend only from what it can read on it.", /*#__PURE__*/React.createElement("button", {
+    className: "cb-btn",
+    style: {
+      marginLeft: 8
+    },
+    onClick: () => setListImgs(prev => prev.slice(0, -1))
+  }, "Remove last"), /*#__PURE__*/React.createElement("button", {
+    className: "cb-btn",
+    style: {
+      marginLeft: 8
+    },
+    onClick: () => setListImgs([])
+  }, "Clear all"))), err && /*#__PURE__*/React.createElement("div", {
     className: "cb-field"
   }, /*#__PURE__*/React.createElement("div", {
     className: "val",
